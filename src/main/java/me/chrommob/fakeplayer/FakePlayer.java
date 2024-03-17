@@ -6,18 +6,23 @@ import me.chrommob.config.ConfigManager;
 import me.chrommob.fakeplayer.config.FakePlayerConfig;
 import me.chrommob.fakeplayer.impl.FakeData;
 import me.chrommob.fakeplayer.impl.FakePlayerImpl;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextReplacementConfig;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @SuppressWarnings("unused")
 public final class FakePlayer extends JavaPlugin implements Listener {
+    private ConfigManager configManager;
     private final FakePlayerConfig fakePlayerConfig = new FakePlayerConfig("config");
     private final Map<String, FakePlayerImpl> fakePlayers = new HashMap<>();
 
@@ -34,13 +39,28 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        ConfigManager configManager = new ConfigManager(getDataFolder());
+        getCommand("reloadfakeplayer").setExecutor((sender, command, label, args) -> {
+            if (sender.hasPermission("fakeplayer.reload")) {
+                reloadConfig();
+                sender.sendMessage("Config reloaded");
+            }
+            return true;
+        });
+        configManager = new ConfigManager(getDataFolder());
         configManager.addConfig(fakePlayerConfig);
         getServer().getPluginManager().registerEvents(this, this);
+        PacketEvents.getAPI().init();
+        startSchedulers();
+    }
+
+    private int addTaskId;
+    private int deathTaskId;
+    private int achievementTaskId;
+    private void startSchedulers() {
         int playerJoinQuitFrequency = fakePlayerConfig.getKey("player-join-quit-frequency").getAsInt();
         int minFakePlayers = fakePlayerConfig.getKey("min-fake-players").getAsInt();
         int maxFakePlayers = fakePlayerConfig.getKey("max-fake-players").getAsInt();
-        Bukkit.getScheduler().runTaskTimer(this, () -> {
+        addTaskId = Bukkit.getScheduler().runTaskTimer(this, () -> {
             int random = (int) (Math.random() * (maxFakePlayers - minFakePlayers + 1) + minFakePlayers);
             if (fakePlayers.size() < random) {
                 for (int i = 0; i < random - fakePlayers.size(); i++) {
@@ -57,28 +77,45 @@ public final class FakePlayer extends JavaPlugin implements Listener {
                     removeFakePlayer(name);
                 }
             }
-        }, 0, playerJoinQuitFrequency);
+        }, 0, playerJoinQuitFrequency).getTaskId();
         boolean fakeDeathMessages = fakePlayerConfig.getKey("fake-death-messages").getAsBoolean();
         int fakeMessageFrequency = fakePlayerConfig.getKey("fake-message-frequency").getAsInt();
         if (fakeDeathMessages) {
-            Bukkit.getScheduler().runTaskTimer(this, () -> {
+            deathTaskId = Bukkit.getScheduler().runTaskTimer(this, () -> {
                 FakePlayerImpl fakePlayer = getRandomFakePlayer();
+                calculateDeathPercentage();
                 if (fakePlayer != null) {
-                    fakePlayer.death();
+                    Component fakeDeathMessage = getDeathMessage();
+                    if (fakeDeathMessage == null) {
+                        return;
+                    }
+                    fakePlayer.death(fakeDeathMessage);
                 }
-            }, 0, fakeMessageFrequency);
+            }, 0, fakeMessageFrequency).getTaskId();
         }
         boolean fakeAchievementMessages = fakePlayerConfig.getKey("fake-achievement-messages").getAsBoolean();
         int fakeAchievementFrequency = fakePlayerConfig.getKey("fake-achievement-frequency").getAsInt();
         if (fakeAchievementMessages) {
-            Bukkit.getScheduler().runTaskTimer(this, () -> {
+            achievementTaskId = Bukkit.getScheduler().runTaskTimer(this, () -> {
                 FakePlayerImpl fakePlayer = getRandomFakePlayer();
+                calculatePercentage();
                 if (fakePlayer != null) {
-                    fakePlayer.achievement();
+                    Component fakeAchievementMessage = getAchievementMessage();
+                    if (fakeAchievementMessage == null) {
+                        return;
+                    }
+                    fakePlayer.achievement(fakeAchievementMessage);
                 }
-            }, 0, fakeAchievementFrequency);
+            }, 0, fakeAchievementFrequency).getTaskId();
         }
-        PacketEvents.getAPI().init();
+    }
+
+    public void reloadConfig() {
+        configManager.reloadConfig("config");
+        Bukkit.getScheduler().cancelTask(addTaskId);
+        Bukkit.getScheduler().cancelTask(deathTaskId);
+        Bukkit.getScheduler().cancelTask(achievementTaskId);
+        startSchedulers();
     }
 
     private final Map<String, FakeData> potentialFakePlayers = new HashMap<>();
@@ -90,6 +127,95 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         potentialFakePlayers.get(event.getPlayer().getName()).setQuitMessage(event.quitMessage());
+    }
+
+    private Component getAchievementMessage() {
+        if (percentages.isEmpty()) {
+            return null;
+        }
+        return percentages.get((int) (Math.random() * percentages.size()));
+    }
+
+    private Component getDeathMessage() {
+        if (deathPercentages.isEmpty()) {
+            return null;
+        }
+        return deathPercentages.get((int) (Math.random() * deathPercentages.size()));
+    }
+
+    private final List<Component> percentages = new ArrayList<>();
+
+    private final Map<Integer, Component> map = new TreeMap<>();
+    private final Map<String, Integer> map2 = new HashMap<>();
+    @EventHandler
+    public void onPlayerAchievement(PlayerAdvancementDoneEvent event) {
+        if (event.message() == null) {
+            return;
+        }
+        TextReplacementConfig replacementConfig = TextReplacementConfig.builder().match(event.getPlayer().getName()).replacement("%player%").build();
+        TextReplacementConfig replacementConfig2 = TextReplacementConfig.builder().match(PlainTextComponentSerializer.plainText().serialize(event.getPlayer().displayName())).replacement("%player%").build();
+        Component message = event.message().replaceText(replacementConfig).replaceText(replacementConfig2);
+        String messageString = PlainTextComponentSerializer.plainText().serialize(message);
+        if (map2.get(messageString) == null) {
+            map2.put(messageString, 1);
+            map.put(1, message);
+        } else {
+            int count = map2.get(messageString);
+            map2.put(messageString, count + 1);
+            map.put(count + 1, message);
+        }
+    }
+
+    private final List<Component> deathPercentages = new ArrayList<>();
+    private final Map<Integer, Component> deathMap = new TreeMap<>();
+    private final Map<String, Integer> deathMap2 = new HashMap<>();
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        if (event.deathMessage() == null) {
+            return;
+        }
+        TextReplacementConfig replacementConfig = TextReplacementConfig.builder().match(event.getPlayer().getName()).replacement("%player%").build();
+        TextReplacementConfig replacementConfig2 = TextReplacementConfig.builder().match(PlainTextComponentSerializer.plainText().serialize(event.getPlayer().displayName())).replacement("%player%").build();
+        Component message = event.deathMessage().replaceText(replacementConfig).replaceText(replacementConfig2);
+        String messageString = PlainTextComponentSerializer.plainText().serialize(message);
+        if (deathMap2.get(messageString) == null) {
+            deathMap2.put(messageString, 1);
+            deathMap.put(1, message);
+        } else {
+            int count = deathMap2.get(messageString);
+            deathMap2.put(messageString, count + 1);
+            deathMap.put(count + 1, message);
+        }
+    }
+
+    private void calculateDeathPercentage() {
+        int total = 0;
+        for (int i : deathMap2.values()) {
+            total += i;
+        }
+        for (Map.Entry<Integer, Component> entry : deathMap.entrySet()) {
+            int count = entry.getKey();
+            Component message = entry.getValue();
+            int percentage = (int) ((count / (double) total) * 100);
+            for (int i = 0; i < percentage; i++) {
+                deathPercentages.add(message);
+            }
+        }
+    }
+
+    private void calculatePercentage() {
+        int total = 0;
+        for (int i : map2.values()) {
+            total += i;
+        }
+        for (Map.Entry<Integer, Component> entry : map.entrySet()) {
+            int count = entry.getKey();
+            Component message = entry.getValue();
+            int percentage = (int) ((count / (double) total) * 100);
+            for (int i = 0; i < percentage; i++) {
+                percentages.add(message);
+            }
+        }
     }
 
     @Override

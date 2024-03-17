@@ -8,6 +8,7 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPl
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoUpdate;
 import me.chrommob.fakeplayer.FakePlayer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextReplacementConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -94,12 +95,12 @@ public class FakePlayerImpl implements Listener {
         return new WrapperPlayServerPlayerInfoUpdate(packet.getActions(), packet.getEntries());
     }
 
-    public void death() {
-
+    public void death(Component fakeDeathMessage) {
+        Bukkit.getServer().broadcast(fakeDeathMessage.replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
     }
 
-    public void achievement() {
-
+    public void achievement(Component fakeAchievementMessage) {
+        Bukkit.getServer().broadcast(fakeAchievementMessage.replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
     }
 }
 
