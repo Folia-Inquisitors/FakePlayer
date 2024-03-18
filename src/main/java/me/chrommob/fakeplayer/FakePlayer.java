@@ -2,6 +2,7 @@ package me.chrommob.fakeplayer;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import me.chrommob.config.ConfigManager;
 import me.chrommob.fakeplayer.config.FakePlayerConfig;
 import me.chrommob.fakeplayer.impl.FakeData;
@@ -23,6 +24,7 @@ import java.util.*;
 @SuppressWarnings("unused")
 public final class FakePlayer extends JavaPlugin implements Listener {
     private ConfigManager configManager;
+    private boolean isFolia = false;
     private final FakePlayerConfig fakePlayerConfig = new FakePlayerConfig("config");
     private final Map<String, FakePlayerImpl> fakePlayers = new HashMap<>();
 
@@ -39,6 +41,11 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            isFolia = true;
+        } catch (ClassNotFoundException ignored) {
+        }
         getCommand("reloadfakeplayer").setExecutor((sender, command, label, args) -> {
             if (sender.hasPermission("fakeplayer.reload")) {
                 reloadConfig();
@@ -54,59 +61,92 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     }
 
     private int addTaskId;
+    private ScheduledTask addTaskS;
     private int deathTaskId;
+    private ScheduledTask deathTaskS;
     private int achievementTaskId;
+    private ScheduledTask achievementTaskS;
     private void startSchedulers() {
+        if (isFolia)
+            startFoliaSchedulers();
+        else
+            startBukkitSchedulers();
+    }
+
+    private void startFoliaSchedulers() {
         int playerJoinQuitFrequency = fakePlayerConfig.getKey("player-join-quit-frequency").getAsInt();
         int minFakePlayers = fakePlayerConfig.getKey("min-fake-players").getAsInt();
         int maxFakePlayers = fakePlayerConfig.getKey("max-fake-players").getAsInt();
-        addTaskId = Bukkit.getScheduler().runTaskTimer(this, () -> {
-            int random = (int) (Math.random() * (maxFakePlayers - minFakePlayers + 1) + minFakePlayers);
-            if (fakePlayers.size() < random) {
-                for (int i = 0; i < random - fakePlayers.size(); i++) {
-                    FakeData fakeData = getNextAvailableFakePlayer();
-                    if (fakeData != null) {
-                        addFakePlayer(fakeData.getName());
-                    }
-                }
-            }
-            if (fakePlayers.size() > random) {
-                for (int i = 0; i < fakePlayers.size() - random; i++) {
-                    int randomIndex = (int) (Math.random() * fakePlayers.size());
-                    String name = (String) fakePlayers.keySet().toArray()[randomIndex];
-                    removeFakePlayer(name);
-                }
-            }
-        }, 0, playerJoinQuitFrequency).getTaskId();
+        addTaskS = Bukkit.getGlobalRegionScheduler().runAtFixedRate(this, scheduledTask -> addTask.run(), playerJoinQuitFrequency, playerJoinQuitFrequency);
         boolean fakeDeathMessages = fakePlayerConfig.getKey("fake-death-messages").getAsBoolean();
         int fakeMessageFrequency = fakePlayerConfig.getKey("fake-message-frequency").getAsInt();
         if (fakeDeathMessages) {
-            deathTaskId = Bukkit.getScheduler().runTaskTimer(this, () -> {
-                FakePlayerImpl fakePlayer = getRandomFakePlayer();
-                calculateDeathPercentage();
-                if (fakePlayer != null) {
-                    Component fakeDeathMessage = getDeathMessage();
-                    if (fakeDeathMessage == null) {
-                        return;
-                    }
-                    fakePlayer.death(fakeDeathMessage);
-                }
-            }, 0, fakeMessageFrequency).getTaskId();
+            deathTaskS = Bukkit.getGlobalRegionScheduler().runAtFixedRate(this, scheduledTask -> deathTask.run(), fakeMessageFrequency, fakeMessageFrequency);
         }
         boolean fakeAchievementMessages = fakePlayerConfig.getKey("fake-achievement-messages").getAsBoolean();
         int fakeAchievementFrequency = fakePlayerConfig.getKey("fake-achievement-frequency").getAsInt();
         if (fakeAchievementMessages) {
-            achievementTaskId = Bukkit.getScheduler().runTaskTimer(this, () -> {
-                FakePlayerImpl fakePlayer = getRandomFakePlayer();
-                calculatePercentage();
-                if (fakePlayer != null) {
-                    Component fakeAchievementMessage = getAchievementMessage();
-                    if (fakeAchievementMessage == null) {
-                        return;
-                    }
-                    fakePlayer.achievement(fakeAchievementMessage);
+            achievementTaskS= Bukkit.getGlobalRegionScheduler().runAtFixedRate(this, scheduledTask -> achievementTask.run(), fakeAchievementFrequency, fakeAchievementFrequency);
+        }
+    }
+
+    private final Runnable addTask = () -> {
+        int minFakePlayers = fakePlayerConfig.getKey("min-fake-players").getAsInt();
+        int maxFakePlayers = fakePlayerConfig.getKey("max-fake-players").getAsInt();
+        int random = (int) (Math.random() * (maxFakePlayers - minFakePlayers + 1) + minFakePlayers);
+        if (fakePlayers.size() < random) {
+            for (int i = 0; i < random - fakePlayers.size(); i++) {
+                FakeData fakeData = getNextAvailableFakePlayer();
+                if (fakeData != null) {
+                    addFakePlayer(fakeData.getName());
                 }
-            }, 0, fakeAchievementFrequency).getTaskId();
+            }
+        }
+        if (fakePlayers.size() > random) {
+            for (int i = 0; i < fakePlayers.size() - random; i++) {
+                int randomIndex = (int) (Math.random() * fakePlayers.size());
+                String name = (String) fakePlayers.keySet().toArray()[randomIndex];
+                removeFakePlayer(name);
+            }
+        }
+    };
+
+    private final Runnable deathTask = () -> {
+        FakePlayerImpl fakePlayer = getRandomFakePlayer();
+        calculateDeathPercentage();
+        if (fakePlayer != null) {
+            Component fakeDeathMessage = getDeathMessage();
+            if (fakeDeathMessage == null) {
+                return;
+            }
+            fakePlayer.death(fakeDeathMessage);
+        }
+    };
+
+    private final Runnable achievementTask = () -> {
+        FakePlayerImpl fakePlayer = getRandomFakePlayer();
+        calculatePercentage();
+        if (fakePlayer != null) {
+            Component fakeAchievementMessage = getAchievementMessage();
+            if (fakeAchievementMessage == null) {
+                return;
+            }
+            fakePlayer.achievement(fakeAchievementMessage);
+        }
+    };
+
+    private void startBukkitSchedulers() {
+        int playerJoinQuitFrequency = fakePlayerConfig.getKey("player-join-quit-frequency").getAsInt();
+        addTaskId = Bukkit.getScheduler().runTaskTimer(this, addTask, playerJoinQuitFrequency, playerJoinQuitFrequency).getTaskId();
+        boolean fakeDeathMessages = fakePlayerConfig.getKey("fake-death-messages").getAsBoolean();
+        int fakeMessageFrequency = fakePlayerConfig.getKey("fake-message-frequency").getAsInt();
+        if (fakeDeathMessages) {
+            deathTaskId = Bukkit.getScheduler().runTaskTimer(this, deathTask, fakeMessageFrequency, fakeMessageFrequency).getTaskId();
+        }
+        boolean fakeAchievementMessages = fakePlayerConfig.getKey("fake-achievement-messages").getAsBoolean();
+        int fakeAchievementFrequency = fakePlayerConfig.getKey("fake-achievement-frequency").getAsInt();
+        if (fakeAchievementMessages) {
+            achievementTaskId = Bukkit.getScheduler().runTaskTimer(this, achievementTask, fakeAchievementFrequency, fakeAchievementFrequency).getTaskId();
         }
     }
 
@@ -115,6 +155,11 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         Bukkit.getScheduler().cancelTask(addTaskId);
         Bukkit.getScheduler().cancelTask(deathTaskId);
         Bukkit.getScheduler().cancelTask(achievementTaskId);
+        if (isFolia) {
+            addTaskS.cancel();
+            deathTaskS.cancel();
+            achievementTaskS.cancel();
+        }
         startSchedulers();
     }
 
