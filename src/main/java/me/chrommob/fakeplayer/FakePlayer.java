@@ -11,6 +11,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -18,11 +19,23 @@ import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.yaml.snakeyaml.Yaml;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 
 @SuppressWarnings("unused")
 public final class FakePlayer extends JavaPlugin implements Listener {
+    private File dataFolder;
+    private File percentagesFile;
+    private File mapFile;
+    private File map2File;
+    private File deathPercentagesFile;
+    private File deathMapFile;
+    private File deathMap2File;
+    private final Yaml yaml = new Yaml();
     private ConfigManager configManager;
     private boolean isFolia = false;
     private final FakePlayerConfig fakePlayerConfig = new FakePlayerConfig("config");
@@ -41,6 +54,17 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        dataFolder = new File(getDataFolder(), "data");
+        if (!dataFolder.exists()) {
+            dataFolder.mkdirs();
+        }
+        percentagesFile = new File(dataFolder, "percentages.yml");
+        mapFile = new File(dataFolder, "map.yml");
+        map2File = new File(dataFolder, "map2.yml");
+        deathPercentagesFile = new File(dataFolder, "deathPercentages.yml");
+        deathMapFile = new File(dataFolder, "deathMap.yml");
+        deathMap2File = new File(dataFolder, "deathMap2.yml");
+        loadData();
         try {
             Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
             isFolia = true;
@@ -74,18 +98,27 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     }
 
     private void startFoliaSchedulers() {
-        int playerJoinQuitFrequency = fakePlayerConfig.getKey("player-join-quit-frequency").getAsInt();
+        int playerJoinQuitFrequency = fakePlayerConfig.getKey("player-join-quit-frequency").getAsInt();§
+        if (playerJoinQuitFrequency == -1) {
+            playerJoinQuitFrequency = getDynamicPlayerJoinQuitFrequency();
+        }
         int minFakePlayers = fakePlayerConfig.getKey("min-fake-players").getAsInt();
         int maxFakePlayers = fakePlayerConfig.getKey("max-fake-players").getAsInt();
         addTaskS = Bukkit.getGlobalRegionScheduler().runAtFixedRate(this, scheduledTask -> addTask.run(), playerJoinQuitFrequency, playerJoinQuitFrequency);
         boolean fakeDeathMessages = fakePlayerConfig.getKey("fake-death-messages").getAsBoolean();
         int fakeMessageFrequency = fakePlayerConfig.getKey("fake-message-frequency").getAsInt();
         if (fakeDeathMessages) {
+            if (fakeMessageFrequency == -1) {
+                fakeMessageFrequency = getDynamicFakeMessageFrequency();
+            }
             deathTaskS = Bukkit.getGlobalRegionScheduler().runAtFixedRate(this, scheduledTask -> deathTask.run(), fakeMessageFrequency, fakeMessageFrequency);
         }
         boolean fakeAchievementMessages = fakePlayerConfig.getKey("fake-achievement-messages").getAsBoolean();
         int fakeAchievementFrequency = fakePlayerConfig.getKey("fake-achievement-frequency").getAsInt();
         if (fakeAchievementMessages) {
+            if (fakeAchievementFrequency == -1) {
+                fakeAchievementFrequency = getDynamicFakeAchievementFrequency();
+            }
             achievementTaskS= Bukkit.getGlobalRegionScheduler().runAtFixedRate(this, scheduledTask -> achievementTask.run(), fakeAchievementFrequency, fakeAchievementFrequency);
         }
     }
@@ -188,10 +221,9 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         return deathPercentages.get((int) (Math.random() * deathPercentages.size()));
     }
 
-    private final List<Component> percentages = new ArrayList<>();
-
-    private final Map<Integer, Component> map = new TreeMap<>();
-    private final Map<String, Integer> map2 = new HashMap<>();
+    private List<Component> percentages;
+    private Map<Integer, Component> map;
+    private Map<String, Integer> map2;
     @EventHandler
     public void onPlayerAchievement(PlayerAdvancementDoneEvent event) {
         if (event.message() == null) {
@@ -211,9 +243,9 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         }
     }
 
-    private final List<Component> deathPercentages = new ArrayList<>();
-    private final Map<Integer, Component> deathMap = new TreeMap<>();
-    private final Map<String, Integer> deathMap2 = new HashMap<>();
+    private List<Component> deathPercentages;
+    private Map<Integer, Component> deathMap;
+    private Map<String, Integer> deathMap2;
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (event.deathMessage() == null) {
@@ -265,7 +297,82 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
+        saveData();
+        PacketEvents.getAPI().terminate();
+    }
+
+    private void loadData() {
+        Object percentagesObject = loadFromFile(percentagesFile);
+        Object mapObject = loadFromFile(mapFile);
+        Object map2Object = loadFromFile(map2File);
+        Object deathPercentagesObject = loadFromFile(deathPercentagesFile);
+        Object deathMapObject = loadFromFile(deathMapFile);
+        Object deathMap2Object = loadFromFile(deathMap2File);
+
+        if (percentagesObject instanceof List) {
+            percentages = (List<Component>) percentagesObject;
+        } else {
+            percentages = new ArrayList<>();
+        }
+        if (mapObject instanceof Map) {
+            map = (Map<Integer, Component>) mapObject;
+        } else {
+            map = new HashMap<>();
+        }
+        if (map2Object instanceof Map) {
+            map2 = (Map<String, Integer>) map2Object;
+        } else {
+            map2 = new HashMap<>();
+        }
+        if (deathPercentagesObject instanceof List) {
+            deathPercentages = (List<Component>) deathPercentagesObject;
+        } else {
+            deathPercentages = new ArrayList<>();
+        }
+        if (deathMapObject instanceof Map) {
+            deathMap = (Map<Integer, Component>) deathMapObject;
+        } else {
+            deathMap = new HashMap<>();
+        }
+        if (deathMap2Object instanceof Map) {
+            deathMap2 = (Map<String, Integer>) deathMap2Object;
+        } else {
+            deathMap2 = new HashMap<>();
+        }
+    }
+
+    private void saveData() {
+        String percentagesString = yaml.dump(percentages);
+        String mapString = yaml.dump(map);
+        String map2String = yaml.dump(map2);
+        String deathPercentagesString = yaml.dump(deathPercentages);
+        String deathMapString = yaml.dump(deathMap);
+        String deathMap2String = yaml.dump(deathMap2);
+
+        writeToFile(percentagesFile, percentagesString);
+        writeToFile(mapFile, mapString);
+        writeToFile(map2File, map2String);
+        writeToFile(deathPercentagesFile, deathPercentagesString);
+        writeToFile(deathMapFile, deathMapString);
+        writeToFile(deathMap2File, deathMap2String);
+    }
+
+    private Object loadFromFile(File file) {
+        try {
+            return yaml.load(Files.newBufferedReader(file.toPath()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private void writeToFile(File file, String string) {
+        try {
+            file.createNewFile();
+            Files.write(file.toPath(), string.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public Map<String, FakePlayerImpl> getFakePlayers() {
@@ -301,5 +408,13 @@ public final class FakePlayer extends JavaPlugin implements Listener {
             }
         }
         return null;
+    }
+
+    public boolean isFakePlayer(String name) {
+        return fakePlayers.get(name) != null;
+    }
+
+    public boolean isFakePlayer(Player player) {
+        return fakePlayers.get(player.getName()) != null;
     }
 }
