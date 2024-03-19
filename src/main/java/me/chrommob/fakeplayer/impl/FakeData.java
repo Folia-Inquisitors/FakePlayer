@@ -84,6 +84,11 @@ public class FakeData {
             e.printStackTrace();
             return null;
         }
-        return new FakeData((String) jsonObject.get("name"), JSONComponentSerializer.json().deserialize((String) jsonObject.get("joinMessage")), JSONComponentSerializer.json().deserialize((String) jsonObject.get("quitMessage")), (String) jsonObject.get("texture"), (String) jsonObject.get("signature"));
+        String name = (String) jsonObject.get("name");
+        Component joinMessage = JSONComponentSerializer.json().deserialize((String) jsonObject.get("joinMessage"));
+        Component quitMessage = jsonObject.get("quitMessage") == null ? null : JSONComponentSerializer.json().deserialize((String) jsonObject.get("quitMessage"));
+        String texture = jsonObject.get("texture") == null ? null : (String) jsonObject.get("texture");
+        String signature = jsonObject.get("signature") == null ? null : (String) jsonObject.get("signature");
+        return new FakeData(name, joinMessage, quitMessage, texture, signature);
     }
 }

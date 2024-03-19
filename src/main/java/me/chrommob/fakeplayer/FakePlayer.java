@@ -285,12 +285,18 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private final Map<String, FakeData> potentialFakePlayers = new HashMap<>();
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        if (event.joinMessage() == null) {
+            return;
+        }
         potentialFakePlayers.put(event.getPlayer().getName(), new FakeData(event.getPlayer(), event));
         frequencyData.newTimeBetweenJoins();
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
+        if (event.quitMessage() == null) {
+            return;
+        }
         potentialFakePlayers.get(event.getPlayer().getName()).setQuitMessage(event.quitMessage());
         frequencyData.newTimeBetweenJoins();
     }
@@ -529,5 +535,9 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     public boolean isFakePlayer(Player player) {
         return fakePlayers.get(player.getName()) != null;
+    }
+
+    public void addSelf(String name, FakePlayerImpl fakePlayer) {
+        fakePlayers.put(name, fakePlayer);
     }
 }

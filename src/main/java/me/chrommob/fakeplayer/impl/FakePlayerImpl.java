@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -33,11 +34,25 @@ public class FakePlayerImpl implements Listener {
     }
 
     public WrapperPlayServerPlayerInfoUpdate createPlayerInfoPacket() {
-        TextureProperty textureProperty = new TextureProperty("textures", fakeData.getTexture(), fakeData.getSignature());
-        UserProfile userProfile = new UserProfile(uuid, fakeData.getName(), List.of(textureProperty));
+        UserProfile userProfile = getUserProfile();
         WrapperPlayServerPlayerInfoUpdate.PlayerInfo playerInfo = new WrapperPlayServerPlayerInfoUpdate.PlayerInfo(userProfile, true, 50, GameMode.SURVIVAL, Component.text(fakeData.getName()), null);
         EnumSet<WrapperPlayServerPlayerInfoUpdate.Action> actions = EnumSet.of(WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER, WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LISTED);
         return new WrapperPlayServerPlayerInfoUpdate(actions, playerInfo);
+    }
+
+    @NotNull
+    private UserProfile getUserProfile() {
+        TextureProperty textureProperty = null;
+        if (fakeData.getTexture() != null && fakeData.getSignature() != null) {
+            textureProperty = new TextureProperty("textures", fakeData.getTexture(), fakeData.getSignature());
+        }
+        UserProfile userProfile;
+        if (textureProperty == null) {
+            userProfile = new UserProfile(uuid, fakeData.getName());
+        } else {
+            userProfile = new UserProfile(uuid, fakeData.getName(), List.of(textureProperty));
+        }
+        return userProfile;
     }
 
     private void onJoin() {
@@ -78,10 +93,11 @@ public class FakePlayerImpl implements Listener {
     private boolean rename() {
         isOnline = false;
         FakeData newFakeData = plugin.getNextAvailableFakePlayer();
+        plugin.removeFakePlayer(fakeData.getName());
         if (newFakeData == null) {
-            plugin.removeFakePlayer(fakeData.getName());
             return false;
         }
+        plugin.addSelf(fakeData.getName(), this);
         fakeData = newFakeData;
         playerInfoPacket.getEntries().get(0).getGameProfile().setName(fakeData.getName());
         return true;
