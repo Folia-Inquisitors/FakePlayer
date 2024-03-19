@@ -7,6 +7,7 @@ import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoRemove;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoUpdate;
 import me.chrommob.fakeplayer.FakePlayer;
+import me.chrommob.fakeplayer.data.FakeData;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import org.bukkit.Bukkit;
@@ -84,7 +85,6 @@ public class FakePlayerImpl implements Listener {
                 int delay = (int) (Math.random() * 10) + 5;
                 Bukkit.getScheduler().runTaskLater(FakePlayer.getPlugin(FakePlayer.class), this::onJoin, delay);
             }
-            quit();
             return;
         }
         PacketEvents.getAPI().getPlayerManager().sendPacket(event.getPlayer(), clone(playerInfoPacket));

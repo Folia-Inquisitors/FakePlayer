@@ -6,7 +6,7 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerResponse;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import me.chrommob.fakeplayer.FakePlayerAPI;
+import me.chrommob.fakeplayer.api.FakePlayerAPI;
 
 public class PlayerCount extends SimplePacketListenerAbstract {
     private final FakePlayerAPI plugin = FakePlayerAPI.getInstance();

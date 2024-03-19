@@ -4,9 +4,12 @@ import com.github.retrooper.packetevents.PacketEvents;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import me.chrommob.config.ConfigManager;
 import me.chrommob.fakeplayer.config.FakePlayerConfig;
-import me.chrommob.fakeplayer.impl.FakeData;
+import me.chrommob.fakeplayer.data.FrequencyData;
+import me.chrommob.fakeplayer.data.FakeData;
 import me.chrommob.fakeplayer.impl.FakePlayerImpl;
 import me.chrommob.fakeplayer.packet.PlayerCount;
+import me.chrommob.fakeplayer.packet.PlayerPing;
+import me.chrommob.fakeplayer.placeholder.PlayerCountPlaceholder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.serializer.json.JSONComponentSerializer;
@@ -31,7 +34,6 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 @SuppressWarnings("unused")
 public final class FakePlayer extends JavaPlugin implements Listener {
-    private File dataFolder;
     private File percentagesFile;
     private File mapFile;
     private File deathPercentagesFile;
@@ -57,9 +59,13 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        dataFolder = new File(getDataFolder(), "data");
+        File dataFolder = new File(getDataFolder(), "data");
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
+        }
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            getLogger().info("PlaceholderAPI found, enabling support");
+            new PlayerCountPlaceholder().register();
         }
         percentagesFile = new File(dataFolder, "percentages.yml");
         mapFile = new File(dataFolder, "map.yml");
@@ -127,6 +133,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         configManager.addConfig(fakePlayerConfig);
         getServer().getPluginManager().registerEvents(this, this);
         PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
+        PacketEvents.getAPI().getEventManager().registerListener(new PlayerPing());
         PacketEvents.getAPI().init();
         startSchedulers();
     }

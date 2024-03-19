@@ -1,4 +1,4 @@
-package me.chrommob.fakeplayer.impl;
+package me.chrommob.fakeplayer.data;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;

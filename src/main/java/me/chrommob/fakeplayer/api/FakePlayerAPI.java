@@ -1,5 +1,6 @@
-package me.chrommob.fakeplayer;
+package me.chrommob.fakeplayer.api;
 
+import me.chrommob.fakeplayer.FakePlayer;
 import me.chrommob.fakeplayer.impl.FakePlayerImpl;
 import org.bukkit.entity.Player;
 

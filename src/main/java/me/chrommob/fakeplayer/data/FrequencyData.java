@@ -1,4 +1,4 @@
-package me.chrommob.fakeplayer;
+package me.chrommob.fakeplayer.data;
 
 public class FrequencyData {
     private int timeBetweenJoinsMin = -1;

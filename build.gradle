@@ -26,11 +26,15 @@ repositories {
         name = "jitpack"
         url = "https://jitpack.io"
     }
+    maven {
+        url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
+    }
 }
 
 dependencies {
     compileOnly "dev.folia:folia-api:1.20.4-R0.1-SNAPSHOT"
-    implementation 'com.github.retrooper.packetevents:spigot:2.2.0'
+    compileOnly 'me.clip:placeholderapi:2.11.5'
+    implementation 'com.github.retrooper.packetevents:spigot:2.2.1'
     implementation 'com.github.ChromMob:ConfigManager:master-SNAPSHOT'
 }
 
@@ -59,4 +63,9 @@ processResources {
     filesMatching('plugin.yml') {
         expand props
     }
+}
+
+shadowJar {
+    relocate("me.chrommob.config", "me.chrommob.libs.config")
+    relocate("com.github.retrooper.packetevents", "me.chrommob.libs.packetevents")
 }
