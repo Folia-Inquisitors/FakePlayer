@@ -10,3 +10,10 @@ commands:
     usage: /reloadfakeplayer
     permission: fakeplayer.reload
     aliases: [rfp]
+permissions:
+  fakeplayer.reload:
+    description: Allows the player to reload the FakePlayer plugin
+    default: op
+  fakeplayer.exempt:
+    description: Allows the player to bypass the FakePlayer plugin
+    default: op

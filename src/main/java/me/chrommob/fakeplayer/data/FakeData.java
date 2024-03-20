@@ -86,7 +86,16 @@ public class FakeData {
         }
         String name = (String) jsonObject.get("name");
         Component joinMessage = JSONComponentSerializer.json().deserialize((String) jsonObject.get("joinMessage"));
-        Component quitMessage = jsonObject.get("quitMessage") == null ? null : JSONComponentSerializer.json().deserialize((String) jsonObject.get("quitMessage"));
+        Component quitMessage;
+        if (jsonObject.get("quitMessage") == null) {
+            quitMessage = null;
+        } else {
+            try {
+                quitMessage = JSONComponentSerializer.json().deserialize((String) jsonObject.get("quitMessage"));
+            } catch (Exception e) {
+                quitMessage = null;
+            }
+        }
         String texture = jsonObject.get("texture") == null ? null : (String) jsonObject.get("texture");
         String signature = jsonObject.get("signature") == null ? null : (String) jsonObject.get("signature");
         return new FakeData(name, joinMessage, quitMessage, texture, signature);

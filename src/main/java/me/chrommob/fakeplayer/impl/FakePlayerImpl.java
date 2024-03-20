@@ -19,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 
@@ -32,13 +33,35 @@ public class FakePlayerImpl implements Listener {
         this.fakeData = fakePlayer;
         playerInfoPacket = createPlayerInfoPacket();
         onJoin();
+        if (plugin.isFolia()) {
+            Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduledTask -> updateLatency(), 7*20L, 30*20L);
+        } else {
+            Bukkit.getScheduler().runTaskTimer(plugin, this::updateLatency, 7 * 20L, 30 * 20L);
+        }
     }
 
     public WrapperPlayServerPlayerInfoUpdate createPlayerInfoPacket() {
         UserProfile userProfile = getUserProfile();
-        WrapperPlayServerPlayerInfoUpdate.PlayerInfo playerInfo = new WrapperPlayServerPlayerInfoUpdate.PlayerInfo(userProfile, true, 50, GameMode.SURVIVAL, Component.text(fakeData.getName()), null);
-        EnumSet<WrapperPlayServerPlayerInfoUpdate.Action> actions = EnumSet.of(WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER, WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LISTED);
+        WrapperPlayServerPlayerInfoUpdate.PlayerInfo playerInfo = new WrapperPlayServerPlayerInfoUpdate.PlayerInfo(userProfile, true, 0, GameMode.SURVIVAL, Component.text(fakeData.getName()), null);
+        EnumSet<WrapperPlayServerPlayerInfoUpdate.Action> actions = EnumSet.of(WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER, WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LISTED, WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LATENCY);
         return new WrapperPlayServerPlayerInfoUpdate(actions, playerInfo);
+    }
+
+    private void updateLatency() {
+        if (isOnline) {
+            int latency;
+            boolean isHighLatency = Math.random() < 0.05;
+            if (isHighLatency) {
+                latency = new Random().nextInt(1000);
+            }
+            else {
+                latency = new Random().nextInt(150) + 50;
+            }
+            playerInfoPacket.getEntries().get(0).setLatency(latency);
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                PacketEvents.getAPI().getPlayerManager().sendPacket(player, clone(playerInfoPacket));
+            }
+        }
     }
 
     @NotNull
@@ -83,7 +106,11 @@ public class FakePlayerImpl implements Listener {
             event.joinMessage(null);
             if (rename()) {
                 int delay = (int) (Math.random() * 10) + 5;
-                Bukkit.getScheduler().runTaskLater(FakePlayer.getPlugin(FakePlayer.class), this::onJoin, delay);
+                if (plugin.isFolia()) {
+                    Bukkit.getGlobalRegionScheduler().runDelayed(plugin, scheduledTask -> onJoin(), delay);
+                } else {
+                    Bukkit.getScheduler().runTaskLater(FakePlayer.getPlugin(FakePlayer.class), this::onJoin, delay);
+                }
             }
             return;
         }

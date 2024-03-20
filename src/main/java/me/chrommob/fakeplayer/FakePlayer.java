@@ -8,7 +8,6 @@ import me.chrommob.fakeplayer.data.FrequencyData;
 import me.chrommob.fakeplayer.data.FakeData;
 import me.chrommob.fakeplayer.impl.FakePlayerImpl;
 import me.chrommob.fakeplayer.packet.PlayerCount;
-import me.chrommob.fakeplayer.packet.PlayerPing;
 import me.chrommob.fakeplayer.placeholder.PlayerCountPlaceholder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
@@ -45,6 +44,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private final FakePlayerConfig fakePlayerConfig = new FakePlayerConfig("config");
     private final Map<String, FakePlayerImpl> fakePlayers = new HashMap<>();
     private FrequencyData frequencyData;
+    private boolean isFolia = false;
 
     @Override
     public void onLoad() {
@@ -59,6 +59,11 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            isFolia = true;
+        } catch (ClassNotFoundException ignored) {
+        }
         File dataFolder = new File(getDataFolder(), "data");
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
@@ -133,7 +138,6 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         configManager.addConfig(fakePlayerConfig);
         getServer().getPluginManager().registerEvents(this, this);
         PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
-        PacketEvents.getAPI().getEventManager().registerListener(new PlayerPing());
         PacketEvents.getAPI().init();
         startSchedulers();
     }
@@ -295,8 +299,20 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         if (event.joinMessage() == null) {
             return;
         }
-        potentialFakePlayers.put(event.getPlayer().getName(), new FakeData(event.getPlayer(), event));
         frequencyData.newTimeBetweenJoins();
+        boolean isExempted = event.getPlayer().hasPermission("fakeplayer.exempt");
+        if (potentialFakePlayers.get(event.getPlayer().getName()) == null) {
+            if (isExempted) {
+                return;
+            }
+            potentialFakePlayers.put(event.getPlayer().getName(), new FakeData(event.getPlayer(), event));
+        } else {
+            if (!isExempted) {
+                return;
+            }
+            potentialFakePlayers.remove(event.getPlayer().getName());
+            removeFakePlayer(event.getPlayer().getName());
+        }
     }
 
     @EventHandler
@@ -546,5 +562,9 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     public void addSelf(String name, FakePlayerImpl fakePlayer) {
         fakePlayers.put(name, fakePlayer);
+    }
+
+    public boolean isFolia() {
+        return isFolia;
     }
 }
