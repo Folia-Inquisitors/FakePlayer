@@ -11,6 +11,7 @@ import me.chrommob.fakeplayer.data.FakeData;
 import me.chrommob.fakeplayer.impl.Debugger;
 import me.chrommob.fakeplayer.impl.FakePlayerImpl;
 import me.chrommob.fakeplayer.impl.PlayerCommand;
+import me.chrommob.fakeplayer.impl.PlayerCommandCompletion;
 import me.chrommob.fakeplayer.packet.PlayerCount;
 import me.chrommob.fakeplayer.placeholder.PlayerCountPlaceholder;
 import net.kyori.adventure.text.Component;
@@ -145,6 +146,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         configManager.addConfig(fakePlayerConfig);
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new PlayerCommand(), this);
+        getServer().getPluginManager().registerEvents(new PlayerCommandCompletion(), this);
         PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
         PacketEvents.getAPI().init();
         if (fakePlayerConfig.getKey("mysql").getKey("enabled").getAsBoolean()) {
