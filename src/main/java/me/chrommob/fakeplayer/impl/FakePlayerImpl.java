@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
-
 public class FakePlayerImpl implements Listener {
     private final FakePlayer plugin = FakePlayer.getPlugin(FakePlayer.class);
     private FakeData fakeData;
@@ -33,12 +32,14 @@ public class FakePlayerImpl implements Listener {
     private final WrapperPlayServerPlayerInfoUpdate playerInfoPacket;
     private ScheduledTask scheduledTask;
     private BukkitTask bukkitTask;
+
     public FakePlayerImpl(FakeData fakePlayer) {
         this.fakeData = fakePlayer;
         playerInfoPacket = createPlayerInfoPacket();
         onJoin();
         if (plugin.isFolia()) {
-            scheduledTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduledTask -> updateLatency(), 7*20L, 30*20L);
+            scheduledTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduledTask -> updateLatency(),
+                    7 * 20L, 30 * 20L);
         } else {
             bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, this::updateLatency, 7 * 20L, 30 * 20L);
         }
@@ -46,8 +47,12 @@ public class FakePlayerImpl implements Listener {
 
     public WrapperPlayServerPlayerInfoUpdate createPlayerInfoPacket() {
         UserProfile userProfile = getUserProfile();
-        WrapperPlayServerPlayerInfoUpdate.PlayerInfo playerInfo = new WrapperPlayServerPlayerInfoUpdate.PlayerInfo(userProfile, true, 0, GameMode.SURVIVAL, Component.text(fakeData.getName()), null);
-        EnumSet<WrapperPlayServerPlayerInfoUpdate.Action> actions = EnumSet.of(WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER, WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LISTED, WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LATENCY);
+        WrapperPlayServerPlayerInfoUpdate.PlayerInfo playerInfo = new WrapperPlayServerPlayerInfoUpdate.PlayerInfo(
+                userProfile, true, 0, GameMode.SURVIVAL, Component.text(fakeData.getName()), null);
+        EnumSet<WrapperPlayServerPlayerInfoUpdate.Action> actions = EnumSet.of(
+                WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER,
+                WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LISTED,
+                WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LATENCY);
         return new WrapperPlayServerPlayerInfoUpdate(actions, playerInfo);
     }
 
@@ -57,11 +62,11 @@ public class FakePlayerImpl implements Listener {
             boolean isHighLatency = Math.random() < 0.05;
             if (isHighLatency) {
                 latency = new Random().nextInt(1000);
-            }
-            else {
+            } else {
                 latency = new Random().nextInt(150) + 50;
             }
-            plugin.getDebugger().debug("Setting latency of " + fakeData.getName() + " with UUID " + uuid + " to " + latency);
+            plugin.getDebugger()
+                    .debug("Setting latency of " + fakeData.getName() + " with UUID " + uuid + " to " + latency);
             playerInfoPacket.getEntries().get(0).setLatency(latency);
             for (Player player : Bukkit.getOnlinePlayers()) {
                 PacketEvents.getAPI().getPlayerManager().sendPacket(player, clone(playerInfoPacket));
@@ -110,7 +115,7 @@ public class FakePlayerImpl implements Listener {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     PacketEvents.getAPI().getPlayerManager().sendPacket(player, removePacket);
                 }
-            }, 20); 
+            }, 20);
         } else {
             Bukkit.getScheduler().runTaskLater(FakePlayer.getPlugin(FakePlayer.class), () -> {
                 for (Player player : Bukkit.getOnlinePlayers()) {
@@ -164,15 +169,16 @@ public class FakePlayerImpl implements Listener {
     }
 
     public void death(Component fakeDeathMessage) {
-        Bukkit.getServer().broadcast(fakeDeathMessage.replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
+        Bukkit.getServer().broadcast(fakeDeathMessage.replaceText(
+                TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
     }
 
     public void achievement(Component fakeAchievementMessage) {
-        Bukkit.getServer().broadcast(fakeAchievementMessage.replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
+        Bukkit.getServer().broadcast(fakeAchievementMessage.replaceText(
+                TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
     }
 
     public UUID getUuid() {
         return uuid;
     }
 }
-

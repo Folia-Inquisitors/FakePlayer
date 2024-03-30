@@ -32,8 +32,25 @@ public class PlayerCommandCompletion implements Listener {
                 if (event.getBuffer().split(" ").length < 3) {
                     return;
                 }
+                String target = event.getBuffer().split(" ")[1];
+                boolean isJustSpaces = false;
+                for (char c : target.toCharArray()) {
+                    if (c != ' ') {
+                        isJustSpaces = false;
+                        break;
+                    }
+                    isJustSpaces = true;
+                }
                 Set<String> fakePlayers = FakePlayerAPI.getInstance().getFakePlayerNames();
-                event.getCompletions().addAll(fakePlayers);
+                if (isJustSpaces) {
+                    event.getCompletions().addAll(fakePlayers);
+                } else {
+                    for (String fakePlayer : fakePlayers) {
+                        if (fakePlayer.startsWith(target)) {
+                            event.getCompletions().add(fakePlayer);
+                        }
+                    }
+                }
             }
         }
     }
