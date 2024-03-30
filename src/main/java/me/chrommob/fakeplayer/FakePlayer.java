@@ -146,8 +146,8 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
         PacketEvents.getAPI().init();
-        if (fakePlayerConfig.getKey("database").getKey("enabled").getAsBoolean()) {
-            database = new Database(UUID.fromString(fakePlayerConfig.getKey("id").getAsString()), fakePlayerConfig.getKey("database").getKey("host").getAsString(), fakePlayerConfig.getKey("database").getKey("port").getAsInt(), fakePlayerConfig.getKey("database").getKey("database").getAsString(), fakePlayerConfig.getKey("database").getKey("username").getAsString(), fakePlayerConfig.getKey("database").getKey("password").getAsString());
+        if (fakePlayerConfig.getKey("mysql").getKey("enabled").getAsBoolean()) {
+            database = new Database(UUID.fromString(fakePlayerConfig.getKey("id").getAsString()), fakePlayerConfig.getKey("mysql").getKey("host").getAsString(), fakePlayerConfig.getKey("mysql").getKey("port").getAsInt(), fakePlayerConfig.getKey("mysql").getKey("mysql").getAsString(), fakePlayerConfig.getKey("mysql").getKey("username").getAsString(), fakePlayerConfig.getKey("mysql").getKey("password").getAsString());
         } else {
             database = null;
         }
