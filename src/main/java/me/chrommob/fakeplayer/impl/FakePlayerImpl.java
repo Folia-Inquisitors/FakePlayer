@@ -6,6 +6,7 @@ import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoRemove;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoUpdate;
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import me.chrommob.fakeplayer.FakePlayer;
 import me.chrommob.fakeplayer.data.FakeData;
 import net.kyori.adventure.text.Component;
@@ -15,6 +16,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
@@ -29,14 +31,16 @@ public class FakePlayerImpl implements Listener {
     private final UUID uuid = UUID.randomUUID();
     private boolean isOnline;
     private final WrapperPlayServerPlayerInfoUpdate playerInfoPacket;
+    private ScheduledTask scheduledTask;
+    private BukkitTask bukkitTask;
     public FakePlayerImpl(FakeData fakePlayer) {
         this.fakeData = fakePlayer;
         playerInfoPacket = createPlayerInfoPacket();
         onJoin();
         if (plugin.isFolia()) {
-            Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduledTask -> updateLatency(), 7*20L, 30*20L);
+            scheduledTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduledTask -> updateLatency(), 7*20L, 30*20L);
         } else {
-            Bukkit.getScheduler().runTaskTimer(plugin, this::updateLatency, 7 * 20L, 30 * 20L);
+            bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, this::updateLatency, 7 * 20L, 30 * 20L);
         }
     }
 
@@ -57,6 +61,7 @@ public class FakePlayerImpl implements Listener {
             else {
                 latency = new Random().nextInt(150) + 50;
             }
+            plugin.getDebugger().debug("Setting latency of " + fakeData.getName() + " with UUID " + uuid + " to " + latency);
             playerInfoPacket.getEntries().get(0).setLatency(latency);
             for (Player player : Bukkit.getOnlinePlayers()) {
                 PacketEvents.getAPI().getPlayerManager().sendPacket(player, clone(playerInfoPacket));
@@ -90,14 +95,31 @@ public class FakePlayerImpl implements Listener {
     public void quit() {
         if (isOnline) {
             broadcastQuitMessage();
+            if (plugin.isFolia()) {
+                scheduledTask.cancel();
+            } else {
+                bukkitTask.cancel();
+            }
         }
         WrapperPlayServerPlayerInfoRemove removePacket = new WrapperPlayServerPlayerInfoRemove(uuid);
         for (Player player : Bukkit.getOnlinePlayers()) {
             PacketEvents.getAPI().getPlayerManager().sendPacket(player, removePacket);
         }
+        if (plugin.isFolia()) {
+            Bukkit.getGlobalRegionScheduler().runDelayed(plugin, scheduledTask -> {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    PacketEvents.getAPI().getPlayerManager().sendPacket(player, removePacket);
+                }
+            }, 20); 
+        } else {
+            Bukkit.getScheduler().runTaskLater(FakePlayer.getPlugin(FakePlayer.class), () -> {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    PacketEvents.getAPI().getPlayerManager().sendPacket(player, removePacket);
+                }
+            }, 20);
+        }
     }
 
-    @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (event.getPlayer().getName().equals(fakeData.getName())) {
             if (event.joinMessage() != null) {
@@ -112,6 +134,9 @@ public class FakePlayerImpl implements Listener {
                     Bukkit.getScheduler().runTaskLater(FakePlayer.getPlugin(FakePlayer.class), this::onJoin, delay);
                 }
             }
+            return;
+        }
+        if (!isOnline) {
             return;
         }
         PacketEvents.getAPI().getPlayerManager().sendPacket(event.getPlayer(), clone(playerInfoPacket));
@@ -144,6 +169,10 @@ public class FakePlayerImpl implements Listener {
 
     public void achievement(Component fakeAchievementMessage) {
         Bukkit.getServer().broadcast(fakeAchievementMessage.replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
+    }
+
+    public UUID getUuid() {
+        return uuid;
     }
 }
 

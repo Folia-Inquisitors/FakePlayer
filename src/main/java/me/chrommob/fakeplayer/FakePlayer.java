@@ -3,9 +3,12 @@ package me.chrommob.fakeplayer;
 import com.github.retrooper.packetevents.PacketEvents;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import me.chrommob.config.ConfigManager;
+import me.chrommob.config.ConfigWrapper;
 import me.chrommob.fakeplayer.config.FakePlayerConfig;
+import me.chrommob.fakeplayer.data.Database;
 import me.chrommob.fakeplayer.data.FrequencyData;
 import me.chrommob.fakeplayer.data.FakeData;
+import me.chrommob.fakeplayer.impl.Debugger;
 import me.chrommob.fakeplayer.impl.FakePlayerImpl;
 import me.chrommob.fakeplayer.packet.PlayerCount;
 import me.chrommob.fakeplayer.placeholder.PlayerCountPlaceholder;
@@ -33,6 +36,8 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 @SuppressWarnings("unused")
 public final class FakePlayer extends JavaPlugin implements Listener {
+    private Database database;
+    private Debugger debugger;
     private File percentagesFile;
     private File mapFile;
     private File deathPercentagesFile;
@@ -64,6 +69,8 @@ public final class FakePlayer extends JavaPlugin implements Listener {
             isFolia = true;
         } catch (ClassNotFoundException ignored) {
         }
+        debugger = new Debugger(this);
+
         File dataFolder = new File(getDataFolder(), "data");
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
@@ -139,6 +146,11 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
         PacketEvents.getAPI().init();
+        if (fakePlayerConfig.getKey("database").getKey("enabled").getAsBoolean()) {
+            database = new Database(UUID.fromString(fakePlayerConfig.getKey("id").getAsString()), fakePlayerConfig.getKey("database").getKey("host").getAsString(), fakePlayerConfig.getKey("database").getKey("port").getAsInt(), fakePlayerConfig.getKey("database").getKey("database").getAsString(), fakePlayerConfig.getKey("database").getKey("username").getAsString(), fakePlayerConfig.getKey("database").getKey("password").getAsString());
+        } else {
+            database = null;
+        }
         startSchedulers();
     }
 
@@ -255,13 +267,18 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         if (fakePlayers.size() < random) {
             FakeData fakeData = getNextAvailableFakePlayer();
             if (fakeData != null) {
+                debugger.debug("Adding fake player " + fakeData.getName());
                 addFakePlayer(fakeData);
             }
         }
         if (fakePlayers.size() > random) {
             int randomIndex = (int) (Math.random() * fakePlayers.size());
             String name = (String) fakePlayers.keySet().toArray()[randomIndex];
+            debugger.debug("Removing fake player " + name);
             removeFakePlayer(name);
+        }
+        if (database != null) {
+            database.updatePlayerCount(fakePlayers.size());
         }
     };
 
@@ -296,6 +313,9 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private final Map<String, FakeData> potentialFakePlayers = new HashMap<>();
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        for (FakePlayerImpl fakePlayer : fakePlayers.values()) {
+            fakePlayer.onPlayerJoin(event);
+        }
         if (event.joinMessage() == null) {
             return;
         }
@@ -320,8 +340,11 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         if (event.quitMessage() == null) {
             return;
         }
-        potentialFakePlayers.get(event.getPlayer().getName()).setQuitMessage(event.quitMessage());
         frequencyData.newTimeBetweenJoins();
+        if (potentialFakePlayers.get(event.getPlayer().getName()) == null) {
+            return;
+        }
+        potentialFakePlayers.get(event.getPlayer().getName()).setQuitMessage(event.quitMessage());
     }
 
     private Component getAchievementMessage() {
@@ -526,6 +549,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
             return;
         }
         fakePlayers.get(name).quit();
+        debugger.debug("Removed fake player " + name + " with UUID " + fakePlayers.get(name).getUuid());
         fakePlayers.remove(name);
     }
 
@@ -533,6 +557,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         FakePlayerImpl fakePlayer = new FakePlayerImpl(fakeData);
         Bukkit.getPluginManager().registerEvents(fakePlayer, this);
         fakePlayers.put(fakeData.getName(), fakePlayer);
+        debugger.debug("Added fake player " + fakeData.getName() + " with UUID " + fakePlayer.getUuid());
     }
 
     public FakePlayerImpl getRandomFakePlayer() {
@@ -566,5 +591,13 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     public boolean isFolia() {
         return isFolia;
+    }
+
+    public Debugger getDebugger() {
+        return debugger;
+    }
+
+    public ConfigWrapper getFakePlayerConfig() {
+        return fakePlayerConfig;
     }
 }
