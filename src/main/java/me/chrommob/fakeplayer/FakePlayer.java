@@ -10,6 +10,7 @@ import me.chrommob.fakeplayer.data.FrequencyData;
 import me.chrommob.fakeplayer.data.FakeData;
 import me.chrommob.fakeplayer.impl.Debugger;
 import me.chrommob.fakeplayer.impl.FakePlayerImpl;
+import me.chrommob.fakeplayer.impl.PlayerCommand;
 import me.chrommob.fakeplayer.packet.PlayerCount;
 import me.chrommob.fakeplayer.placeholder.PlayerCountPlaceholder;
 import net.kyori.adventure.text.Component;
@@ -60,7 +61,6 @@ public final class FakePlayer extends JavaPlugin implements Listener {
                 .bStats(true);
         PacketEvents.getAPI().load();
     }
-
 
     @Override
     public void onEnable() {
@@ -144,10 +144,16 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         configManager = new ConfigManager(getDataFolder());
         configManager.addConfig(fakePlayerConfig);
         getServer().getPluginManager().registerEvents(this, this);
+        getServer().getPluginManager().registerEvents(new PlayerCommand(), this);
         PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
         PacketEvents.getAPI().init();
         if (fakePlayerConfig.getKey("mysql").getKey("enabled").getAsBoolean()) {
-            database = new Database(UUID.fromString(fakePlayerConfig.getKey("id").getAsString()), fakePlayerConfig.getKey("mysql").getKey("host").getAsString(), fakePlayerConfig.getKey("mysql").getKey("port").getAsInt(), fakePlayerConfig.getKey("mysql").getKey("mysql").getAsString(), fakePlayerConfig.getKey("mysql").getKey("username").getAsString(), fakePlayerConfig.getKey("mysql").getKey("password").getAsString());
+            database = new Database(UUID.fromString(fakePlayerConfig.getKey("id").getAsString()),
+                    fakePlayerConfig.getKey("mysql").getKey("host").getAsString(),
+                    fakePlayerConfig.getKey("mysql").getKey("port").getAsInt(),
+                    fakePlayerConfig.getKey("mysql").getKey("mysql").getAsString(),
+                    fakePlayerConfig.getKey("mysql").getKey("username").getAsString(),
+                    fakePlayerConfig.getKey("mysql").getKey("password").getAsString());
         } else {
             database = null;
         }
@@ -157,6 +163,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private long shouldRunAdd = 0;
     private long shouldRunDeath = 0;
     private long shouldRunAchievement = 0;
+
     private void startSchedulers() {
         new Thread(() -> {
             while (true) {
@@ -257,7 +264,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         if (third < 0) {
             third = Long.MAX_VALUE;
         }
-        return Math.min(Math.min(first, second), third)/50L;
+        return Math.min(Math.min(first, second), third) / 50L;
     }
 
     private final Runnable addTask = () -> {
@@ -311,6 +318,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     }
 
     private final Map<String, FakeData> potentialFakePlayers = new HashMap<>();
+
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         for (FakePlayerImpl fakePlayer : fakePlayers.values()) {
@@ -363,13 +371,17 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     private List<Component> percentages;
     private Map<String, Integer> map;
+
     @EventHandler
     public void onPlayerAchievement(PlayerAdvancementDoneEvent event) {
         if (event.message() == null) {
             return;
         }
-        TextReplacementConfig replacementConfig = TextReplacementConfig.builder().match(event.getPlayer().getName()).replacement("%player%").build();
-        TextReplacementConfig replacementConfig2 = TextReplacementConfig.builder().match(PlainTextComponentSerializer.plainText().serialize(event.getPlayer().displayName())).replacement("%player%").build();
+        TextReplacementConfig replacementConfig = TextReplacementConfig.builder().match(event.getPlayer().getName())
+                .replacement("%player%").build();
+        TextReplacementConfig replacementConfig2 = TextReplacementConfig.builder()
+                .match(PlainTextComponentSerializer.plainText().serialize(event.getPlayer().displayName()))
+                .replacement("%player%").build();
         Component message = event.message().replaceText(replacementConfig).replaceText(replacementConfig2);
         String messageString = JSONComponentSerializer.json().serialize(message);
         if (map.get(messageString) == null) {
@@ -383,13 +395,17 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     private List<Component> deathPercentages;
     private Map<String, Integer> deathMap;
+
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (event.deathMessage() == null) {
             return;
         }
-        TextReplacementConfig replacementConfig = TextReplacementConfig.builder().match(event.getPlayer().getName()).replacement("%player%").build();
-        TextReplacementConfig replacementConfig2 = TextReplacementConfig.builder().match(PlainTextComponentSerializer.plainText().serialize(event.getPlayer().displayName())).replacement("%player%").build();
+        TextReplacementConfig replacementConfig = TextReplacementConfig.builder().match(event.getPlayer().getName())
+                .replacement("%player%").build();
+        TextReplacementConfig replacementConfig2 = TextReplacementConfig.builder()
+                .match(PlainTextComponentSerializer.plainText().serialize(event.getPlayer().displayName()))
+                .replacement("%player%").build();
         Component message = event.deathMessage().replaceText(replacementConfig).replaceText(replacementConfig2);
         String messageString = JSONComponentSerializer.json().serialize(message);
         if (deathMap.get(messageString) == null) {
@@ -533,7 +549,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private void writeToFile(File file, String string) {
         try {
             file.createNewFile();
-            //Overwrite the previous content
+            // Overwrite the previous content
             Files.write(file.toPath(), string.getBytes(), TRUNCATE_EXISTING);
         } catch (IOException e) {
             e.printStackTrace();
@@ -570,7 +586,8 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     public FakeData getNextAvailableFakePlayer() {
         for (FakeData fakeData : potentialFakePlayers.values()) {
-            if (!fakePlayers.containsKey(fakeData.getName()) && fakeData.isReady() && Bukkit.getPlayer(fakeData.getName()) == null) {
+            if (!fakePlayers.containsKey(fakeData.getName()) && fakeData.isReady()
+                    && Bukkit.getPlayer(fakeData.getName()) == null) {
                 return fakeData;
             }
         }
