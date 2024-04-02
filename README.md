@@ -40,7 +40,6 @@ Ability to have fake usernames displayed through the tab plugin board when someo
 >
 > fakeplayer:rfp
 >
-> fakevote
 
 ## Default Config
 
