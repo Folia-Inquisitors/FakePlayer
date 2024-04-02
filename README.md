@@ -87,7 +87,6 @@ fake-achievement-frequency: -1
 dynamic-frequency-outliers-drop: 97
 
 ```
-## Documentation
 
 ### Folia inquisitors
 
