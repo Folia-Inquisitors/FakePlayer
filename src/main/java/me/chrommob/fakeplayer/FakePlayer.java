@@ -153,7 +153,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
             database = new Database(UUID.fromString(fakePlayerConfig.getKey("id").getAsString()),
                     fakePlayerConfig.getKey("mysql").getKey("host").getAsString(),
                     fakePlayerConfig.getKey("mysql").getKey("port").getAsInt(),
-                    fakePlayerConfig.getKey("mysql").getKey("mysql").getAsString(),
+                    fakePlayerConfig.getKey("mysql").getKey("database").getAsString(),
                     fakePlayerConfig.getKey("mysql").getKey("username").getAsString(),
                     fakePlayerConfig.getKey("mysql").getKey("password").getAsString());
         } else {

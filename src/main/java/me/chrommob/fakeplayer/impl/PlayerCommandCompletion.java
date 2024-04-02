@@ -1,17 +1,16 @@
 package me.chrommob.fakeplayer.impl;
 
-import java.util.List;
 import java.util.Set;
 
+import com.destroystokyo.paper.event.server.AsyncTabCompleteEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.server.TabCompleteEvent;
 
 import me.chrommob.fakeplayer.api.FakePlayerAPI;
 
 public class PlayerCommandCompletion implements Listener {
     @EventHandler
-    public void onTabComplete(TabCompleteEvent event) {
+    public void onTabComplete(AsyncTabCompleteEvent event) {
         if (event.getBuffer().startsWith("/")) {
             if (event.getBuffer().split(" ").length < 1) {
                 return;
@@ -29,7 +28,9 @@ public class PlayerCommandCompletion implements Listener {
                     || command.equalsIgnoreCase("bukkit:whisper") || command.equalsIgnoreCase("minecraft:r")
                     || command.equalsIgnoreCase("bukkit:r") || command.equalsIgnoreCase("minecraft:reply")
                     || command.equalsIgnoreCase("bukkit:reply")) {
-                if (event.getBuffer().split(" ").length < 3) {
+                Set<String> fakePlayers = FakePlayerAPI.getInstance().getFakePlayerNames();
+                if (event.getBuffer().split(" ").length < 2) {
+                    event.getCompletions().addAll(fakePlayers);
                     return;
                 }
                 String target = event.getBuffer().split(" ")[1];
@@ -41,7 +42,6 @@ public class PlayerCommandCompletion implements Listener {
                     }
                     isJustSpaces = true;
                 }
-                Set<String> fakePlayers = FakePlayerAPI.getInstance().getFakePlayerNames();
                 if (isJustSpaces) {
                     event.getCompletions().addAll(fakePlayers);
                 } else {

@@ -32,11 +32,11 @@ public class PlayerCommand implements Listener {
                     || command.equalsIgnoreCase("bukkit:whisper") || command.equalsIgnoreCase("minecraft:r")
                     || command.equalsIgnoreCase("bukkit:r") || command.equalsIgnoreCase("minecraft:reply")
                     || command.equalsIgnoreCase("bukkit:reply")) {
-                if (message.split(" ").length < 3) {
+                if (message.split(" ").length < 2) {
                     return;
                 }
                 String target = message.split(" ")[1];
-                if (message.split(" ").length < 4) {
+                if (message.split(" ").length < 3) {
                     return;
                 }
                 String messageToSend = message.substring(command.length() + target.length() + 2);
