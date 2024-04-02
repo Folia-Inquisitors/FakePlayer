@@ -12,7 +12,7 @@ https://discord.gg/aT9z7q7hX8
 ## Description
 
 Ability to have fake usernames displayed through the tab plugin board when someone presses tab, and the chat tab option .
-**
+
 > - Fake player placeholder which includes online players 
 > 
 > - An api so other plugins can hook into it. Ability to hook into other plugins, like YATPA, FASTMOTD.  
