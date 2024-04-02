@@ -24,7 +24,7 @@ This allows you others to mute people that are annoying and spam chat. This is m
 
 ```
 # Server UUID
-id: 0050b07b-0f74-4428-94a1-8f16b4782d82
+id: 
 # MySQL settings
 mysql:
   # Whether to use MySQL
