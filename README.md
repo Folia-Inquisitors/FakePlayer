@@ -11,7 +11,29 @@ https://discord.gg/aT9z7q7hX8
  
 ## Description
 
-This allows you others to mute people that are annoying and spam chat. This is meant to be a simple plugin for servers. It is highly optimized and heavily tested. Feel free to constribute,.
+Ability to have fake usernames displayed through the tab plugin board when someone presses tab, and the chat tab option .
+**
+> - Fake player placeholder which includes online players 
+> 
+> - An api so other plugins can hook into it. Ability to hook into other plugins, like YATPA, FASTMOTD.  
+> 
+>   It pull from past joined players usernames, and if they happen to join it replaced with another’s.
+> 
+> - Config option - fake join and leave  messages ( where you could set a range of how many fake players will leave and join within a configurable time period )  
+> 
+> - Config option - ( be able to turn off and on  ) fake dynamic death messages of people fake dying ( with a configurable time period of how often these messages occur ) ( death messages be randomized ) 
+> 
+> - Config option - ( be able to turn off and on ) fake dynamic achievement message  ( with a configurable time rate of how often it occurs ) ( achievement message low to high if that’s not available randomize  )
+>
+> - SQL and Velocity support.
+>
+> - DiscordSRV Support
+
+
+### Dependencies
+>
+> - Tab
+>
 
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
