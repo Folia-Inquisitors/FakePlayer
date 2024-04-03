@@ -21,9 +21,9 @@ Ability to have fake usernames displayed through the tab plugin board when someo
 > 
 > - Config option - fake join and leave  messages ( where you could set a range of how many fake players will leave and join within a configurable time period )  
 > 
-> - Config option - ( be able to turn off and on  ) fake dynamic death messages of people fake dying ( with a configurable time period of how often these messages occur ) ( death messages be randomized ) 
+> - Config option - ( be able to turn off and on  ) fake dynamic death messages of people fake dying ( with a configurable time period of how often these messages occur ) ( death messages based on real rates ) 
 > 
-> - Config option - ( be able to turn off and on ) fake dynamic achievement message  ( with a configurable time rate of how often it occurs ) ( achievement message low to high if that’s not available randomize  )
+> - Config option - ( be able to turn off and on ) fake dynamic achievement message  ( with a configurable time rate of how often it occurs ) ( achievement message based on real rates  )
 >
 > - SQL and Velocity support.
 >
