@@ -7,7 +7,7 @@ https://discord.gg/aT9z7q7hX8
 
 ## Building instructions
 
-./gradlew build
+./gradlew shadowjar
  
 ## Description
 
