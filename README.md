@@ -29,19 +29,10 @@ Ability to have fake usernames displayed through the tab plugin board when someo
 >
 > - DiscordSRV Support
 
+## Placeholders
 
-### SoftDependencies
 >
-> - Tab
-> - YATPA
-> - FakePlayerAPI
-> - FASTMOTD
-
-### Admin commands 
-> fakeplayer:reloadfakeplayer
->
-> fakeplayer:rfp
->
+> - %fakeplayer_count%
 
 ## Default Config
 
@@ -88,6 +79,19 @@ fake-achievement-frequency: -1
 dynamic-frequency-outliers-drop: 97
 
 ```
+
+### SoftDependencies
+>
+> - Tab
+> - YATPA
+> - FakePlayerAPI
+> - FASTMOTD
+
+### Admin commands 
+> fakeplayer:reloadfakeplayer
+>
+> fakeplayer:rfp
+>
 
 ### Folia inquisitors
 
