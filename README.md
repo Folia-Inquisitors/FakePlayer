@@ -29,11 +29,6 @@ Ability to have fake usernames displayed through the tab plugin board when someo
 >
 > - DiscordSRV Support
 
-## Placeholders
-
->
-> - %fakeplayer_count%
-
 ## Default Config
 
 ```
@@ -79,6 +74,11 @@ fake-achievement-frequency: -1
 dynamic-frequency-outliers-drop: 97
 
 ```
+
+## Placeholders
+
+>
+> - %fakeplayer_count%
 
 ### SoftDependencies
 >
