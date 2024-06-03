@@ -30,10 +30,12 @@ Ability to have fake usernames displayed through the tab plugin board when someo
 > - DiscordSRV Support
 
 
-### Dependencies
+### SoftDependencies
 >
 > - Tab
->
+> - YATPA
+> - FakePlayerAPI
+> - FASTMOTD
 
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
