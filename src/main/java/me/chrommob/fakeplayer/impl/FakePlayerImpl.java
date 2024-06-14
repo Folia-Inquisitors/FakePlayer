@@ -6,11 +6,13 @@ import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoRemove;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoUpdate;
+import github.scarsz.discordsrv.DiscordSRV;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import me.chrommob.fakeplayer.FakePlayer;
 import me.chrommob.fakeplayer.data.FakeData;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -92,6 +94,9 @@ public class FakePlayerImpl implements Listener {
     private void onJoin() {
         isOnline = true;
         Bukkit.getServer().broadcast(fakeData.getJoinMessage());
+        if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
+            DiscordSRV.getPlugin(DiscordSRV.class).sendJoinMessage(new BogusPlayer(fakeData, uuid), PlainTextComponentSerializer.plainText().serialize(fakeData.getJoinMessage()));
+        }
         for (Player player : Bukkit.getOnlinePlayers()) {
             PacketEvents.getAPI().getPlayerManager().sendPacket(player, clone(playerInfoPacket));
         }
@@ -162,6 +167,9 @@ public class FakePlayerImpl implements Listener {
 
     public void broadcastQuitMessage() {
         Bukkit.getServer().broadcast(fakeData.getQuitMessage());
+        if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
+            DiscordSRV.getPlugin(DiscordSRV.class).sendLeaveMessage(new BogusPlayer(fakeData, uuid), PlainTextComponentSerializer.plainText().serialize(fakeData.getQuitMessage()));
+        }
     }
 
     public static WrapperPlayServerPlayerInfoUpdate clone(WrapperPlayServerPlayerInfoUpdate packet) {
@@ -170,7 +178,8 @@ public class FakePlayerImpl implements Listener {
 
     public void death(Component fakeDeathMessage) {
         Bukkit.getServer().broadcast(fakeDeathMessage.replaceText(
-                TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
+                TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()).replaceText(
+                TextReplacementConfig.builder().match("%player2%").replacement(FakePlayer.getPlugin(FakePlayer.class).getFakePlayers().keySet().stream().filter(fakeData.getName()::equals).findAny().orElse(FakePlayer.getPlugin(FakePlayer.class).getNextAvailableFakePlayer().getName())).build()));
     }
 
     public void achievement(Component fakeAchievementMessage) {

@@ -403,6 +403,11 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         if (event.deathMessage() == null) {
             return;
         }
+        List<String> playerNames = new ArrayList<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            playerNames.add(player.getName());
+            playerNames.add(player.getDisplayName());
+        }
         TextReplacementConfig replacementConfig = TextReplacementConfig.builder().match(event.getPlayer().getName())
                 .replacement("%player%").build();
         TextReplacementConfig replacementConfig2 = TextReplacementConfig.builder()
@@ -410,6 +415,10 @@ public final class FakePlayer extends JavaPlugin implements Listener {
                 .replacement("%player%").build();
         Component message = event.deathMessage().replaceText(replacementConfig).replaceText(replacementConfig2);
         String messageString = JSONComponentSerializer.json().serialize(message);
+        String foundName = playerNames.stream().filter(messageString::contains).findAny().orElse(null);
+        if (foundName != null) {
+            messageString = messageString.replaceAll(foundName, "%player2%");
+        }
         if (deathMap.get(messageString) == null) {
             deathMap.put(messageString, 1);
         } else {
