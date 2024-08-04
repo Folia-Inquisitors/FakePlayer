@@ -7,13 +7,13 @@ import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoRemove;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoUpdate;
 import github.scarsz.discordsrv.DiscordSRV;
+import github.scarsz.discordsrv.dependencies.jda.api.entities.Message;
+import github.scarsz.discordsrv.dependencies.jda.api.entities.TextChannel;
 import github.scarsz.discordsrv.objects.MessageFormat;
 import github.scarsz.discordsrv.util.*;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import me.chrommob.fakeplayer.FakePlayer;
 import me.chrommob.fakeplayer.data.FakeData;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -101,7 +101,7 @@ public class FakePlayerImpl implements Listener {
         isOnline = true;
         Bukkit.getServer().broadcast(fakeData.getJoinMessage());
         if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
-            DiscordSRV discordSRV = DiscordSRV.getPlugin();
+            DiscordSRV discordSRV = DiscordSRV.getPlugin(DiscordSRV.class);
             MessageFormat messageFormat = discordSRV.getMessageFromConfiguration("MinecraftPlayerJoinMessage");
             if (messageFormat == null || !messageFormat.isAnyContent()) {
                 DiscordSRV.debug("Not sending join message due to it being disabled");
