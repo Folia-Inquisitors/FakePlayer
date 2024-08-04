@@ -7,12 +7,17 @@ import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoRemove;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoUpdate;
 import github.scarsz.discordsrv.DiscordSRV;
+import github.scarsz.discordsrv.objects.MessageFormat;
+import github.scarsz.discordsrv.util.*;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import me.chrommob.fakeplayer.FakePlayer;
 import me.chrommob.fakeplayer.data.FakeData;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -25,6 +30,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.function.BiFunction;
 
 public class FakePlayerImpl implements Listener {
     private final FakePlayer plugin = FakePlayer.getPlugin(FakePlayer.class);
@@ -95,7 +101,57 @@ public class FakePlayerImpl implements Listener {
         isOnline = true;
         Bukkit.getServer().broadcast(fakeData.getJoinMessage());
         if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
-            DiscordSRV.getPlugin(DiscordSRV.class).sendJoinMessage(new BogusPlayer(fakeData, uuid), PlainTextComponentSerializer.plainText().serialize(fakeData.getJoinMessage()));
+            DiscordSRV discordSRV = DiscordSRV.getPlugin();
+            MessageFormat messageFormat = discordSRV.getMessageFromConfiguration("MinecraftPlayerJoinMessage");
+            if (messageFormat == null || !messageFormat.isAnyContent()) {
+                DiscordSRV.debug("Not sending join message due to it being disabled");
+                return;
+            }
+
+            TextChannel textChannel = discordSRV.getOptionalTextChannel("join");
+            if (textChannel == null) {
+                DiscordSRV.debug("Not sending join message, text channel is null");
+                return;
+            }
+
+            final String joinMessage = PlainTextComponentSerializer.plainText().serialize(fakeData.getJoinMessage());
+            final String displayName = StringUtils.isNotBlank(fakeData.getName()) ? MessageUtil.strip(fakeData.getName()) : "";
+            final String message = StringUtils.isNotBlank(joinMessage) ? joinMessage : "";
+            final String name = fakeData.getName();
+            final String avatarUrl = "https://cravatar.eu/helmavatar/" + name + "/128.png";
+
+            final String botAvatarUrl = DiscordUtil.getJda().getSelfUser().getEffectiveAvatarUrl();
+            String botName = discordSRV.getMainGuild() != null ? discordSRV.getMainGuild().getSelfMember().getEffectiveName() : DiscordUtil.getJda().getSelfUser().getName();
+
+            BiFunction<String, Boolean, String> translator = (content, needsEscape) -> {
+                if (content == null) return null;
+                content = content
+                        .replaceAll("%time%|%date%", TimeUtil.timeStamp())
+                        .replace("%message%", MessageUtil.strip(needsEscape ? DiscordUtil.escapeMarkdown(message) : message))
+                        .replace("%username%", needsEscape ? DiscordUtil.escapeMarkdown(name) : name)
+                        .replace("%displayname%", needsEscape ? DiscordUtil.escapeMarkdown(displayName) : displayName)
+                        .replace("%usernamenoescapes%", name)
+                        .replace("%displaynamenoescapes%", displayName)
+                        .replace("%embedavatarurl%", avatarUrl)
+                        .replace("%botavatarurl%", botAvatarUrl)
+                        .replace("%botname%", botName);
+                content = DiscordUtil.translateEmotes(content, textChannel.getGuild());
+                content = PlaceholderUtil.replacePlaceholdersToDiscord(content, Bukkit.getOfflinePlayer(uuid));
+                return content;
+            };
+
+            Message discordMessage = DiscordSRV.translateMessage(messageFormat, translator);
+            if (discordMessage == null) return;
+
+            String webhookName = translator.apply(messageFormat.getWebhookName(), false);
+            String webhookAvatarUrl = translator.apply(messageFormat.getWebhookAvatarUrl(), false);
+
+            if (messageFormat.isUseWebhooks()) {
+                WebhookUtil.deliverMessage(textChannel, webhookName, webhookAvatarUrl,
+                        discordMessage.getContentRaw(), discordMessage.getEmbeds().stream().findFirst().orElse(null));
+            } else {
+                DiscordUtil.queueMessage(textChannel, discordMessage, true);
+            }
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
             PacketEvents.getAPI().getPlayerManager().sendPacket(player, clone(playerInfoPacket));
@@ -168,7 +224,56 @@ public class FakePlayerImpl implements Listener {
     public void broadcastQuitMessage() {
         Bukkit.getServer().broadcast(fakeData.getQuitMessage());
         if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
-            DiscordSRV.getPlugin(DiscordSRV.class).sendLeaveMessage(new BogusPlayer(fakeData, uuid), PlainTextComponentSerializer.plainText().serialize(fakeData.getQuitMessage()));
+                DiscordSRV discordSRV = DiscordSRV.getPlugin();
+                MessageFormat messageFormat = discordSRV.getMessageFromConfiguration("MinecraftPlayerLeaveMessage");
+                if (messageFormat == null || !messageFormat.isAnyContent()) {
+                    DiscordSRV.debug("Not sending leave message due to it being disabled");
+                    return;
+                }
+
+                TextChannel textChannel = discordSRV.getOptionalTextChannel("leave");
+                if (textChannel == null) {
+                    DiscordSRV.debug("Not sending quit message, text channel is null");
+                    return;
+                }
+
+                final String quitMessage = PlainTextComponentSerializer.plainText().serialize(fakeData.getQuitMessage());
+                final String displayName = StringUtils.isNotBlank(fakeData.getName()) ? MessageUtil.strip(fakeData.getName()) : "";
+                final String message = StringUtils.isNotBlank(quitMessage) ? quitMessage : "";
+                final String name = fakeData.getName();
+
+                String avatarUrl = "https://cravatar.eu/helmavatar/" + name + "/128.png";
+                String botAvatarUrl = DiscordUtil.getJda().getSelfUser().getEffectiveAvatarUrl();
+                String botName = discordSRV.getMainGuild() != null ? discordSRV.getMainGuild().getSelfMember().getEffectiveName() : DiscordUtil.getJda().getSelfUser().getName();
+
+                BiFunction<String, Boolean, String> translator = (content, needsEscape) -> {
+                    if (content == null) return null;
+                    content = content
+                            .replaceAll("%time%|%date%", TimeUtil.timeStamp())
+                            .replace("%message%", MessageUtil.strip(needsEscape ? DiscordUtil.escapeMarkdown(message) : message))
+                            .replace("%username%", MessageUtil.strip(needsEscape ? DiscordUtil.escapeMarkdown(name) : name))
+                            .replace("%displayname%", needsEscape ? DiscordUtil.escapeMarkdown(displayName) : displayName)
+                            .replace("%usernamenoescapes%", name)
+                            .replace("%displaynamenoescapes%", displayName)
+                            .replace("%embedavatarurl%", avatarUrl)
+                            .replace("%botavatarurl%", botAvatarUrl)
+                            .replace("%botname%", botName);
+                    content = DiscordUtil.translateEmotes(content, textChannel.getGuild());
+                    return content;
+                };
+
+                Message discordMessage = DiscordSRV.translateMessage(messageFormat, translator);
+                if (discordMessage == null) return;
+
+                String webhookName = translator.apply(messageFormat.getWebhookName(), false);
+                String webhookAvatarUrl = translator.apply(messageFormat.getWebhookAvatarUrl(), false);
+
+                if (messageFormat.isUseWebhooks()) {
+                    WebhookUtil.deliverMessage(textChannel, webhookName, webhookAvatarUrl,
+                            discordMessage.getContentRaw(), discordMessage.getEmbeds().stream().findFirst().orElse(null));
+                } else {
+                    DiscordUtil.queueMessage(textChannel, discordMessage, true);
+                }
         }
     }
 
