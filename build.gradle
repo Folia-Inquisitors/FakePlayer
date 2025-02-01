@@ -8,8 +8,9 @@ version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
-    flatDir {
-        dirs 'libs'
+    maven {
+        name = "folia-inquistors-repo"
+        url = "https://folia-inquisitors.github.io/FoliaDevBundle/"
     }
     maven {
         name = "papermc-repo"
@@ -30,7 +31,7 @@ repositories {
         url = "https://jitpack.io"
     }
     maven {
-        url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
+        url = 'https://repo.extendedclip.com/releases/'
     }
     maven {
         url = 'https://nexus.scarsz.me/content/repositories/public/'
@@ -40,13 +41,13 @@ repositories {
 dependencies {
     compileOnly "dev.folia:folia-api:1.21.4-R0.1-SNAPSHOT"
     compileOnly 'me.clip:placeholderapi:2.11.6'
-    implementation 'com.github.retrooper.packetevents:spigot:2.3.0'
+    implementation 'com.github.retrooper:packetevents-spigot:2.7.0'
     implementation 'com.github.ChromMob:ConfigManager:9d04690e35'
     implementation 'com.zaxxer:HikariCP:6.2.1'
-    compileOnly 'com.github.DiscordSRV:DiscordSRV:1.26.1'
+    compileOnly 'com.discordsrv:discordsrv:1.27.0'
 }
 
-def targetJavaVersion = 17
+def targetJavaVersion = 21
 java {
     def javaVersion = JavaVersion.toVersion(targetJavaVersion)
     sourceCompatibility = javaVersion
