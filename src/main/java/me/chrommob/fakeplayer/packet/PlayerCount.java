@@ -4,7 +4,6 @@ import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
 import com.github.retrooper.packetevents.event.simple.PacketStatusSendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerResponse;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import me.chrommob.fakeplayer.api.FakePlayerAPI;
 
@@ -16,11 +15,11 @@ public class PlayerCount extends SimplePacketListenerAbstract {
             return;
         }
         WrapperStatusServerResponse response = new WrapperStatusServerResponse(event);
-        JsonObject jsonObject = response.getComponent();
-        JsonElement jsonElement = jsonObject.get("players").getAsJsonObject().get("online");
-        int online = jsonElement.getAsInt();
+        JsonObject payload = response.getComponent();
+        JsonObject playersElement = payload.get("players").getAsJsonObject();
+        int online = playersElement.get("online").getAsInt();
         int fakePlayers = plugin.getFakePlayers().size();
-        jsonObject.get("players").getAsJsonObject().addProperty("online", online + fakePlayers);
-        response.setComponent(jsonObject);
+        playersElement.addProperty("online", online + fakePlayers);
+        response.setComponent(payload);
     }
 }
