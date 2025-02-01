@@ -56,10 +56,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     @Override
     public void onLoad() {
         PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
-        // Are all listeners read only?
-        PacketEvents.getAPI().getSettings().reEncodeByDefault(true)
-                .checkForUpdates(false)
-                .bStats(true);
+        PacketEvents.getAPI().getSettings().reEncodeByDefault(true).checkForUpdates(false);
         PacketEvents.getAPI().load();
     }
 
