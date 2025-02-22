@@ -11,7 +11,10 @@ https://discord.gg/aT9z7q7hX8
  
 ## Description
 
-Ability to have fake usernames displayed through the tab plugin board when someone presses tab, and the chat tab option .
+*FakePlayer is suppose to emulate the activities of real players in achievement, death, and leave/join messages. It does this by collecting data on the most frequent death, achievement and join/leave frequencies and emulates them randomly based on what’s most common. This plugin also has support for DiscordSRV, SQL, Tab and Velocity support using FakePlayerAPI.*
+
+**These messages would follow logic such as not displaying messages of fake players who aren’t in the game**. *That is to keep the realism of the fake players. These fake messages also only generate for fake players. So it wouldn’t say a real player was killed, or killed a real player.*
+
 
 > - Fake player placeholder which includes online players 
 > 
