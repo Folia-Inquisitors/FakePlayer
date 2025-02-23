@@ -282,12 +282,18 @@ public class FakePlayerImpl implements Listener {
     }
 
     public void death(Component fakeDeathMessage) {
+        if (!isOnline) {
+            return;
+        }
         Bukkit.getServer().broadcast(fakeDeathMessage.replaceText(
                 TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()).replaceText(
                 TextReplacementConfig.builder().match("%player2%").replacement(FakePlayer.getPlugin(FakePlayer.class).getFakePlayers().keySet().stream().filter(fakeData.getName()::equals).findAny().orElse(FakePlayer.getPlugin(FakePlayer.class).getNextAvailableFakePlayer().getName())).build()));
     }
 
     public void achievement(Component fakeAchievementMessage) {
+        if (!isOnline) {
+            return;
+        }
         Bukkit.getServer().broadcast(fakeAchievementMessage.replaceText(
                 TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
     }
