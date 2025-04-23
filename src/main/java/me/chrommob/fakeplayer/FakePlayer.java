@@ -289,19 +289,20 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     };
 
     private final Runnable deathTask = () -> {
-        FakePlayerImpl fakePlayer = getRandomFakePlayer();
+        FakePlayerImpl fakePlayer = getRandomOnlineFakePlayer();
+        FakePlayerImpl fakePlayer2 = getRandomOnlineFakePlayer();
         calculateDeathPercentage();
-        if (fakePlayer != null) {
+        if (fakePlayer != null && fakePlayer2 != null) {
             Component fakeDeathMessage = getDeathMessage();
             if (fakeDeathMessage == null) {
                 return;
             }
-            fakePlayer.death(fakeDeathMessage);
+            fakePlayer.death(fakeDeathMessage, fakePlayer2);
         }
     };
 
     private final Runnable achievementTask = () -> {
-        FakePlayerImpl fakePlayer = getRandomFakePlayer();
+        FakePlayerImpl fakePlayer = getRandomOnlineFakePlayer();
         calculatePercentage();
         if (fakePlayer != null) {
             Component fakeAchievementMessage = getAchievementMessage();
@@ -590,6 +591,17 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         }
         int randomIndex = (int) (Math.random() * fakePlayers.size());
         return (FakePlayerImpl) fakePlayers.values().toArray()[randomIndex];
+    }
+
+    public FakePlayerImpl getRandomOnlineFakePlayer() {
+        List<FakePlayerImpl> onlineFakePlayers = fakePlayers.values().stream()
+                .filter(FakePlayerImpl::isOnline)
+                .toList();
+        if (onlineFakePlayers.isEmpty()) {
+            return null;
+        }
+        int randomIndex = (int) (Math.random() * onlineFakePlayers.size());
+        return onlineFakePlayers.get(randomIndex);
     }
 
     public FakeData getNextAvailableFakePlayer() {

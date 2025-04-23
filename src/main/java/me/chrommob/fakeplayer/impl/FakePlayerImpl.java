@@ -20,7 +20,6 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitTask;
@@ -51,6 +50,10 @@ public class FakePlayerImpl implements Listener {
         } else {
             bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, this::updateLatency, 7 * 20L, 30 * 20L);
         }
+    }
+
+    public boolean isOnline() {
+        return isOnline;
     }
 
     public WrapperPlayServerPlayerInfoUpdate createPlayerInfoPacket() {
@@ -281,21 +284,17 @@ public class FakePlayerImpl implements Listener {
         return new WrapperPlayServerPlayerInfoUpdate(packet.getActions(), packet.getEntries());
     }
 
-    public void death(Component fakeDeathMessage) {
-        if (!isOnline) {
-            return;
-        }
-        Bukkit.getServer().broadcast(fakeDeathMessage.replaceText(
-                TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()).replaceText(
-                TextReplacementConfig.builder().match("%player2%").replacement(FakePlayer.getPlugin(FakePlayer.class).getFakePlayers().keySet().stream().filter(fakeData.getName()::equals).findAny().orElse(FakePlayer.getPlugin(FakePlayer.class).getNextAvailableFakePlayer().getName())).build()));
+    public void death(Component fakeDeathMessage, FakePlayerImpl other) {
+        Bukkit.getServer().broadcast(fakeDeathMessage
+                .replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build())
+                .replaceText(TextReplacementConfig.builder().match("%player2%").replacement(other.fakeData.getName()).build())
+        );
     }
 
     public void achievement(Component fakeAchievementMessage) {
-        if (!isOnline) {
-            return;
-        }
-        Bukkit.getServer().broadcast(fakeAchievementMessage.replaceText(
-                TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build()));
+        Bukkit.getServer().broadcast(fakeAchievementMessage
+                .replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build())
+        );
     }
 
     public UUID getUuid() {
