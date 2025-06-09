@@ -2,14 +2,18 @@ package me.chrommob.fakeplayer.data;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.json.JSONComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 
 public class FakeData {
+    private static final Gson GSON = new GsonBuilder().create();
+
     private final String name;
     private final Component joinMessage;
     private Component quitMessage = null;
@@ -66,38 +70,47 @@ public class FakeData {
 
     @Override
     public String toString() {
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("name", name);
-        jsonObject.put("joinMessage", JSONComponentSerializer.json().serialize(joinMessage));
-        jsonObject.put("quitMessage", JSONComponentSerializer.json().serialize(quitMessage));
-        jsonObject.put("texture", texture);
-        jsonObject.put("signature", signature);
-        return jsonObject.toJSONString();
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("name", name);
+        jsonObject.addProperty("joinMessage", JSONComponentSerializer.json().serialize(joinMessage));
+        jsonObject.addProperty("quitMessage", quitMessage == null ? null : JSONComponentSerializer.json().serialize(quitMessage));
+        jsonObject.addProperty("texture", texture);
+        jsonObject.addProperty("signature", signature);
+        return GSON.toJson(jsonObject);
     }
 
     public static FakeData fromString(String string) {
-        JSONParser parser = new JSONParser();
-        JSONObject jsonObject;
+        JsonObject jsonObject;
         try {
-            jsonObject = (JSONObject) parser.parse(string);
+            jsonObject = GSON.fromJson(string, JsonObject.class);
+            if (jsonObject == null) {
+                return null;
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
-        String name = (String) jsonObject.get("name");
-        Component joinMessage = JSONComponentSerializer.json().deserialize((String) jsonObject.get("joinMessage"));
+        String name = jsonObject.get("name").getAsString();
+        Component joinMessage = JSONComponentSerializer.json().deserialize(jsonObject.get("joinMessage").getAsString());
         Component quitMessage;
-        if (jsonObject.get("quitMessage") == null) {
+
+        JsonElement quitMessageElement = jsonObject.get("quitMessage");
+        if (quitMessageElement == null || quitMessageElement.isJsonNull()) {
             quitMessage = null;
         } else {
             try {
-                quitMessage = JSONComponentSerializer.json().deserialize((String) jsonObject.get("quitMessage"));
+                quitMessage = JSONComponentSerializer.json().deserialize(quitMessageElement.getAsString());
             } catch (Exception e) {
                 quitMessage = null;
             }
         }
-        String texture = jsonObject.get("texture") == null ? null : (String) jsonObject.get("texture");
-        String signature = jsonObject.get("signature") == null ? null : (String) jsonObject.get("signature");
+
+        JsonElement textureElement = jsonObject.get("texture");
+        String texture = textureElement == null ? null : textureElement.getAsString();
+
+        JsonElement signatureElement = jsonObject.get("signature");
+        String signature = signatureElement == null ? null : signatureElement.getAsString();
+
         return new FakeData(name, joinMessage, quitMessage, texture, signature);
     }
 }
