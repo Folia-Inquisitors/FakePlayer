@@ -67,12 +67,12 @@ public final class FakePlayer extends JavaPlugin implements Listener {
             isFolia = true;
         } catch (ClassNotFoundException ignored) {
         }
-        debugger = new Debugger(this);
 
         File dataFolder = new File(getDataFolder(), "data");
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
         }
+        debugger = new Debugger(this);
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             getLogger().info("PlaceholderAPI found, enabling support");
             new PlayerCountPlaceholder().register();

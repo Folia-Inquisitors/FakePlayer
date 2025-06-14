@@ -3,6 +3,7 @@ version: '${version}'
 main: me.chrommob.fakeplayer.FakePlayer
 api-version: '1.20'
 folia-supported: true
+depend: [packetevents]
 softdepend: [PlaceholderAPI, DiscordSRV]
 commands:
   reloadfakeplayer:

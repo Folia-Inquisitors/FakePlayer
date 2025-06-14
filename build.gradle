@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'com.gradleup.shadow' version '9.0.0-SNAPSHOT'
+    id 'com.gradleup.shadow' version '9.0.0-beta16'
 }
 
 group = 'me.chrommob'
@@ -41,8 +41,10 @@ repositories {
 dependencies {
     compileOnly "dev.folia:folia-api:1.21.5-R0.1-SNAPSHOT"
     compileOnly 'me.clip:placeholderapi:2.11.6'
-    implementation 'com.github.retrooper:packetevents-spigot:2.8.0'
-    implementation 'com.github.ChromMob:ConfigManager:9d04690e35'
+    compileOnly 'com.github.retrooper:packetevents-spigot:2.8.0'
+    implementation('com.github.ChromMob:ConfigManager:9d04690e35') {
+        exclude group: 'org.yaml', module: 'snakeyaml'
+    }
     implementation 'com.zaxxer:HikariCP:6.3.0'
     compileOnly 'com.discordsrv:discordsrv:1.29.0'
 }
@@ -76,6 +78,13 @@ processResources {
 
 shadowJar {
     relocate("me.chrommob.config", "me.chrommob.libs.config")
-    relocate("com.github.retrooper.packetevents", "me.chrommob.libs.packetevents")
     relocate("com.zaxxer.hikari", "me.chrommob.libs.hikaricp")
+}
+
+jar {
+    manifest {
+        attributes(
+            'paperweight-mappings-namespace': 'mojang'
+        )
+    }
 }
