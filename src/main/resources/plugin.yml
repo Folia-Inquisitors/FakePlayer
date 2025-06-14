@@ -5,6 +5,8 @@ api-version: '1.20'
 folia-supported: true
 depend: [packetevents]
 softdepend: [PlaceholderAPI, DiscordSRV]
+libraries:
+  - com.zaxxer:HikariCP:6.3.0
 commands:
   reloadfakeplayer:
     description: Reloads the FakePlayer plugin

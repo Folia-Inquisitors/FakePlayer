@@ -45,7 +45,7 @@ dependencies {
     implementation('com.github.ChromMob:ConfigManager:9d04690e35') {
         exclude group: 'org.yaml', module: 'snakeyaml'
     }
-    implementation 'com.zaxxer:HikariCP:6.3.0'
+    compileOnly 'com.zaxxer:HikariCP:6.3.0'
     compileOnly 'com.discordsrv:discordsrv:1.29.0'
 }
 
@@ -78,7 +78,6 @@ processResources {
 
 shadowJar {
     relocate("me.chrommob.config", "me.chrommob.libs.config")
-    relocate("com.zaxxer.hikari", "me.chrommob.libs.hikaricp")
 }
 
 jar {
