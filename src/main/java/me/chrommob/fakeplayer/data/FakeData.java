@@ -106,10 +106,10 @@ public class FakeData {
         }
 
         JsonElement textureElement = jsonObject.get("texture");
-        String texture = textureElement == null ? null : textureElement.getAsString();
+        String texture = textureElement == null || textureElement.isJsonNull() ? null : textureElement.getAsString();
 
         JsonElement signatureElement = jsonObject.get("signature");
-        String signature = signatureElement == null ? null : signatureElement.getAsString();
+        String signature = signatureElement == null || signatureElement.isJsonNull() ? null : signatureElement.getAsString();
 
         return new FakeData(name, joinMessage, quitMessage, texture, signature);
     }
