@@ -19,19 +19,23 @@ public class FrequencyData {
     }
     public static FrequencyData fromString(String data) {
         FrequencyData frequencyData = new FrequencyData();
-        String[] split = data.split(",");
-        frequencyData.timeBetweenJoinsAvg = Integer.parseInt(split[0]);
-        frequencyData.timeBetweenMessagesAvg = Integer.parseInt(split[1]);
-        frequencyData.timeBetweenAchievementsAvg = Integer.parseInt(split[2]);
 
-        if (frequencyData.timeBetweenJoinsAvg != -1) {
-            frequencyData.timeBetweenJoins.add(frequencyData.timeBetweenJoinsAvg);
-        }
-        if (frequencyData.timeBetweenMessagesAvg != -1) {
-            frequencyData.timeBetweenMessages.add(frequencyData.timeBetweenMessagesAvg);
-        }
-        if (frequencyData.timeBetweenAchievementsAvg != -1) {
-            frequencyData.timeBetweenAchievements.add(frequencyData.timeBetweenAchievementsAvg);
+        try {
+            String[] split = data.split(",");
+            frequencyData.timeBetweenJoinsAvg = Integer.parseInt(split[0]);
+            frequencyData.timeBetweenMessagesAvg = Integer.parseInt(split[1]);
+            frequencyData.timeBetweenAchievementsAvg = Integer.parseInt(split[2]);
+
+            if (frequencyData.timeBetweenJoinsAvg != -1) {
+                frequencyData.timeBetweenJoins.add(frequencyData.timeBetweenJoinsAvg);
+            }
+            if (frequencyData.timeBetweenMessagesAvg != -1) {
+                frequencyData.timeBetweenMessages.add(frequencyData.timeBetweenMessagesAvg);
+            }
+            if (frequencyData.timeBetweenAchievementsAvg != -1) {
+                frequencyData.timeBetweenAchievements.add(frequencyData.timeBetweenAchievementsAvg);
+            }
+        } catch (Throwable ignored) {
         }
 
         return frequencyData;
