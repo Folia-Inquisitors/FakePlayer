@@ -97,6 +97,10 @@ dynamic-frequency-outliers-drop: 97
 > - [FakePlayerAPI](https://github.com/Folia-Inquisitors/FakePlayerAPI) *Purpose: Shows Player count on velocity*
 > - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Disables the ability to teleport to fake players*
 > - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank) *Purpose: Adds a rank "regular" so it can be exempted from Fakeplayer names*
+> - [YATPA](https://github.com/Folia-Inquisitors/YATPA) *Purpose: A TPA plugin made for FakePlayers*
+> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Denies TPA requests to fake players*
+
+
 
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
