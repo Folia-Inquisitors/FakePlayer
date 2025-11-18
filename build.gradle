@@ -40,7 +40,7 @@ repositories {
 
 dependencies {
     compileOnly "dev.folia:folia-api:1.21.8-R0.1-SNAPSHOT"
-    compileOnly 'me.clip:placeholderapi:2.11.6'
+    compileOnly 'me.clip:placeholderapi:2.11.7'
     compileOnly 'com.github.retrooper:packetevents-spigot:2.9.5'
     implementation('com.github.ChromMob:ConfigManager:9d04690e35') {
         exclude group: 'org.yaml', module: 'snakeyaml'
