@@ -93,11 +93,10 @@ dynamic-frequency-outliers-drop: 97
 
 ### SoftDependencies
 >
-> - [Tab Plugin](https://www.spigotmc.org/resources/tab-1-7-x-1-21-10.57806/)
-> - [FakePlayerAPI](https://github.com/Folia-Inquisitors/FakePlayerAPI)
-> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA)
-> - [KeepInv](https://github.com/Folia-Inquisitors/KeepInv)
-> - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank)
+> - [Tab Plugin](https://www.spigotmc.org/resources/tab-1-7-x-1-21-10.57806/) *Purpose: FakePlayer count on Tab*
+> - [FakePlayerAPI](https://github.com/Folia-Inquisitors/FakePlayerAPI) *Purpose: Shows Player count on velocity*
+> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Hides players from TPA list*
+> - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank) *Purpose: Adds a rank "regular so it can be exempted from Fakeplayer names*
 
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
