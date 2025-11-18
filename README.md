@@ -17,7 +17,7 @@ https://discord.gg/aT9z7q7hX8
 
 *If you have velocity use FakePlayersAPI to display player count on the proxies.*
 
-**These messages would follow logic such as not displaying messages of fake players who aren’t in the game**. *That is to keep the realism of the fake players. These fake messages also only generate for fake players. So it wouldn’t say a real player was killed, or killed a real player.*
+**These messages would follow logic such as not displaying messages of fake players who are in the game**. *That is to keep the realism of the fake players. These fake messages also only generate for fake players. So it wouldn’t say a real player was killed, or killed a real player.*
 
 
 > - Fake player placeholder which includes online players 
