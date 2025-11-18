@@ -88,9 +88,7 @@ dynamic-frequency-outliers-drop: 97
 ### SoftDependencies
 >
 > - Tab
-> - YATPA
 > - FakePlayerAPI
-> - FASTMOTD
 
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
