@@ -94,9 +94,10 @@ dynamic-frequency-outliers-drop: 97
 ### SoftDependencies
 >
 > - [Tab Plugin](https://www.spigotmc.org/resources/tab-1-7-x-1-21-10.57806/)
-> - FakePlayerAPI
-> - KeepInv
-> - RegularRank
+> - [FakePlayerAPI](https://github.com/Folia-Inquisitors/FakePlayerAPI)
+> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA)
+> - [KeepInv](https://github.com/Folia-Inquisitors/KeepInv)
+> - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank)
 
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
