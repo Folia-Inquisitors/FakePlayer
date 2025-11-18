@@ -88,9 +88,8 @@ dynamic-frequency-outliers-drop: 97
 
 ## Permissions
 
-> fakeplayer.reload
-> fakeplayer.exempt
-> 
+> - fakeplayer.reload
+> - fakeplayer.exempt
 
 ### SoftDependencies
 >
