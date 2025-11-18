@@ -103,9 +103,6 @@ dynamic-frequency-outliers-drop: 97
 > - [GrimYATPA](https://github.com/Folia-Inquisitors/GrimYATPA) *Purpose: Disables teleportation checks when using [Grim](https://github.com/GrimAnticheat/Grim)*
 > - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank) *Purpose: Adds a rank "regular" so it can be exempted from Fakeplayer names*
 
-
-
-
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
 >
