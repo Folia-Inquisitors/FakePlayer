@@ -83,15 +83,20 @@ dynamic-frequency-outliers-drop: 97
 ```
 
 ## Placeholders
-
 >
 > - %fakeplayer_count%
 
+## Permissions
+
+> fakeplayer.reload
+> fakeplayer.exempt
+
 ### SoftDependencies
 >
-> - Tab
+> - [Tab Plugin](https://www.spigotmc.org/resources/tab-1-7-x-1-21-10.57806/)
 > - FakePlayerAPI
 > - KeepInv
+> - 
 
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
