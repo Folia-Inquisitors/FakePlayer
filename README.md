@@ -91,7 +91,10 @@ dynamic-frequency-outliers-drop: 97
 > - fakeplayer.reload
 > - fakeplayer.exempt
 
-### SoftDependencies
+### Hard Dependencies
+> - [packetevents](https://github.com/retrooper/packetevents) *Purpose: The main dependency that FakePlayers needs to function*
+
+### Soft Dependencies
 >
 > - [Tab Plugin](https://www.spigotmc.org/resources/tab-1-7-x-1-21-10.57806/) *Purpose: FakePlayer count on Tab*
 > - [FakePlayerAPI](https://github.com/Folia-Inquisitors/FakePlayerAPI) *Purpose: Shows Player count on velocity*
