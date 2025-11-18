@@ -98,11 +98,11 @@ dynamic-frequency-outliers-drop: 97
 >
 > - [Tab Plugin](https://www.spigotmc.org/resources/tab-1-7-x-1-21-10.57806/) *Purpose: FakePlayer count on Tab*
 > - [FakePlayerAPI](https://github.com/Folia-Inquisitors/FakePlayerAPI) *Purpose: Shows Player count on velocity*
-> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Disables the ability to teleport to fake players*
-> - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank) *Purpose: Adds a rank "regular" so it can be exempted from Fakeplayer names*
 > - [YATPA](https://github.com/Folia-Inquisitors/YATPA) *Purpose: A TPA plugin made for FakePlayers*
-> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Denies TPA requests to fake players*
+> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Purpose: Denies TPA requests to fake players*
 > - [GrimYATPA](https://github.com/Folia-Inquisitors/GrimYATPA) *Purpose: Disables teleportation checks when using [Grim](https://github.com/GrimAnticheat/Grim)*
+> - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank) *Purpose: Adds a rank "regular" so it can be exempted from Fakeplayer names*
+
 
 
 
