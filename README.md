@@ -9,7 +9,7 @@ https://discord.gg/aT9z7q7hX8
 
 ./gradlew shadowjar
 
-Disclaimer There is no dependency to build this, but you will need PacketEvents in the plugins folder. There are a couple plugins that work with this like GRIM-YATPA, YATPA, and FakePlayersAPI which enables fake player count to be displayed on the server velocity proxies. Only needed if you use velocity, 
+Disclaimer There is no dependency to build this, but you will need PacketEvents in the plugins folder. If you have velocity use FakePlayersAPI to display player count on the proxies.
  
 ## Description
 
