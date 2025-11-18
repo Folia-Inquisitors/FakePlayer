@@ -8,6 +8,8 @@ https://discord.gg/aT9z7q7hX8
 ## Building instructions
 
 ./gradlew shadowjar
+
+Disclaimer There is no dependency to build this, but you will need PacketEvents in the download folder. There are a couple polugins that work with this like GRIM-YATPA, YATPA, and FakePlayersAPI which enables fake player count to be displayed on the server velocity proxies. Only needed if you use velocity, 
  
 ## Description
 
