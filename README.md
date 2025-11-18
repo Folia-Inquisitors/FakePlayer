@@ -91,6 +91,7 @@ dynamic-frequency-outliers-drop: 97
 >
 > - Tab
 > - FakePlayerAPI
+> - KeepInv
 
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
