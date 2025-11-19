@@ -11,7 +11,7 @@ https://discord.gg/aT9z7q7hX8
 
 *Disclaimer: There is no dependency to build this, but you will need PacketEvents in the plugins folder.* 
 
-##Known bugs
+## Known bugs
 Player acheivements and kill msgs don't work. In addition the same usernames always appear, so it isn't dynamic despite the usernames available.
  
 ## Description
