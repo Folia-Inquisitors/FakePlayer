@@ -10,6 +10,9 @@ https://discord.gg/aT9z7q7hX8
 ./gradlew shadowjar
 
 *Disclaimer: There is no dependency to build this, but you will need PacketEvents in the plugins folder.* 
+
+##Known bugs
+Player acheivements and kill msgs don't work. In addition the same usernames always appear, so it isn't dynamic despite the usernames available.
  
 ## Description
 
@@ -18,7 +21,6 @@ https://discord.gg/aT9z7q7hX8
 *If you have velocity use FakePlayersAPI to display player count on the proxies.*
 
 **These messages would follow logic such as not displaying messages of fake players who are in the game**. *That is to keep the realism of the fake players. These fake messages also only generate for fake players. So it wouldn’t say a real player was killed.*
-
 
 > - Fake player placeholder which includes online players 
 > 
