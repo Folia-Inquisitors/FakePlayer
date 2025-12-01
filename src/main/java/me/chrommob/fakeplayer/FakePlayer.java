@@ -2,8 +2,6 @@ package me.chrommob.fakeplayer;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
-import me.chrommob.config.ConfigManager;
-import me.chrommob.config.ConfigWrapper;
 import me.chrommob.fakeplayer.config.FakePlayerConfig;
 import me.chrommob.fakeplayer.data.Database;
 import me.chrommob.fakeplayer.data.FrequencyData;
@@ -14,6 +12,8 @@ import me.chrommob.fakeplayer.impl.PlayerCommand;
 import me.chrommob.fakeplayer.impl.PlayerCommandCompletion;
 import me.chrommob.fakeplayer.packet.PlayerCount;
 import me.chrommob.fakeplayer.placeholder.PlayerCountPlaceholder;
+import me.hsgamer.hscore.bukkit.config.BukkitConfig;
+import me.hsgamer.hscore.config.proxy.ConfigGenerator;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.serializer.json.JSONComponentSerializer;
@@ -47,8 +47,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private File potentialFakePlayersFile;
     private File frequenciesFile;
     private final Yaml yaml = new Yaml();
-    private ConfigManager configManager;
-    private final FakePlayerConfig fakePlayerConfig = new FakePlayerConfig("config");
+    private final FakePlayerConfig fakePlayerConfig = ConfigGenerator.newInstance(FakePlayerConfig.class, new BukkitConfig(this));
     private final Map<String, FakePlayerImpl> fakePlayers = new HashMap<>();
     private FrequencyData frequencyData;
     private boolean isFolia = false;
@@ -139,20 +138,19 @@ public final class FakePlayer extends JavaPlugin implements Listener {
             }
             return true;
         });
-        configManager = new ConfigManager(getDataFolder());
-        configManager.addConfig(fakePlayerConfig);
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new PlayerCommand(), this);
         getServer().getPluginManager().registerEvents(new PlayerCommandCompletion(), this);
         PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
         PacketEvents.getAPI().init();
-        if (fakePlayerConfig.getKey("mysql").getKey("enabled").getAsBoolean()) {
-            database = new Database(UUID.fromString(fakePlayerConfig.getKey("id").getAsString()),
-                    fakePlayerConfig.getKey("mysql").getKey("host").getAsString(),
-                    fakePlayerConfig.getKey("mysql").getKey("port").getAsInt(),
-                    fakePlayerConfig.getKey("mysql").getKey("database").getAsString(),
-                    fakePlayerConfig.getKey("mysql").getKey("username").getAsString(),
-                    fakePlayerConfig.getKey("mysql").getKey("password").getAsString());
+        if (fakePlayerConfig.mysqlEnabled()) {
+            database = new Database(UUID.fromString(fakePlayerConfig.id()),
+                    fakePlayerConfig.mysqlHost(),
+                    fakePlayerConfig.mysqlPort(),
+                    fakePlayerConfig.mysqlDatabase(),
+                    fakePlayerConfig.mysqlUsername(),
+                    fakePlayerConfig.mysqlPassword()
+            );
         } else {
             database = null;
         }
@@ -166,11 +164,11 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private void startSchedulers() {
         new Thread(() -> {
             while (true) {
-                int addFrequency = fakePlayerConfig.getKey("player-join-quit-frequency").getAsInt();
-                int deathFrequency = fakePlayerConfig.getKey("fake-message-frequency").getAsInt();
-                int achievementFrequency = fakePlayerConfig.getKey("fake-achievement-frequency").getAsInt();
-                boolean fakeDeathMessages = fakePlayerConfig.getKey("fake-death-messages").getAsBoolean();
-                boolean fakeAchievementMessages = fakePlayerConfig.getKey("fake-achievement-messages").getAsBoolean();
+                int addFrequency = fakePlayerConfig.playerJoinQuitFrequency();
+                int deathFrequency = fakePlayerConfig.fakeMessageFrequency();
+                int achievementFrequency = fakePlayerConfig.fakeAchievementFrequency();
+                boolean fakeDeathMessages = fakePlayerConfig.fakeDeathMessages();
+                boolean fakeAchievementMessages = fakePlayerConfig.fakeAchievementMessages();
                 if (addFrequency == -1) {
                     addFrequency = frequencyData.getRandomPlayerJoinQuitFrequency();
                 }
@@ -267,8 +265,8 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     }
 
     private final Runnable addTask = () -> {
-        int minFakePlayers = fakePlayerConfig.getKey("min-fake-players").getAsInt();
-        int maxFakePlayers = fakePlayerConfig.getKey("max-fake-players").getAsInt();
+        int minFakePlayers = fakePlayerConfig.minFakePlayers();
+        int maxFakePlayers = fakePlayerConfig.maxFakePlayers();
         int random = (int) (Math.random() * (maxFakePlayers - minFakePlayers + 1) + minFakePlayers);
         if (fakePlayers.size() < random) {
             FakeData fakeData = getNextAvailableFakePlayer();
@@ -314,7 +312,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     };
 
     public void reloadConfig() {
-        configManager.reloadConfig("config");
+        fakePlayerConfig.reloadConfig();
     }
 
     private final Map<String, FakeData> potentialFakePlayers = new HashMap<>();
@@ -634,7 +632,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         return debugger;
     }
 
-    public ConfigWrapper getFakePlayerConfig() {
+    public FakePlayerConfig getFakePlayerConfig() {
         return fakePlayerConfig;
     }
 }

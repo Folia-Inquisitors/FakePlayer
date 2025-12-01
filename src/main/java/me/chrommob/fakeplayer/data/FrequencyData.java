@@ -76,7 +76,7 @@ public class FrequencyData {
         long diff = System.currentTimeMillis() - lastTimeBetweenJoins;
         int timeBetweenJoinsNew = (int) (diff / 50);
         int outLiner = getPercentageOutLiner(timeBetweenJoinsNew, timeBetweenJoins);
-        int toDrop = FakePlayer.getPlugin(FakePlayer.class).getFakePlayerConfig().getKey("dynamic-frequency-outliers-drop").getAsInt();
+        int toDrop = FakePlayer.getPlugin(FakePlayer.class).getFakePlayerConfig().dynamicFrequencyOutliersDrop();
         if (toDrop != 0 && outLiner > toDrop) {
             lastTimeBetweenJoins = System.currentTimeMillis();
             return;
@@ -96,7 +96,7 @@ public class FrequencyData {
         long diff = System.currentTimeMillis() - lastTimeBetweenMessages;
         int timeBetweenMessagesNew = (int) (diff / 50);
         int outLiner = getPercentageOutLiner(timeBetweenMessagesNew, timeBetweenMessages);
-        int toDrop = FakePlayer.getPlugin(FakePlayer.class).getFakePlayerConfig().getKey("dynamic-frequency-outliers-drop").getAsInt();
+        int toDrop = FakePlayer.getPlugin(FakePlayer.class).getFakePlayerConfig().dynamicFrequencyOutliersDrop();
         if (toDrop != 0 && outLiner > toDrop) {
             lastTimeBetweenMessages = System.currentTimeMillis();
             return;
@@ -116,7 +116,7 @@ public class FrequencyData {
         long diff = System.currentTimeMillis() - lastTimeBetweenAchievements;
         int timeBetweenAchievementsNew = (int) (diff / 50);
         int outLiner = getPercentageOutLiner(timeBetweenAchievementsNew, timeBetweenAchievements);
-        int toDrop = FakePlayer.getPlugin(FakePlayer.class).getFakePlayerConfig().getKey("dynamic-frequency-outliers-drop").getAsInt();
+        int toDrop = FakePlayer.getPlugin(FakePlayer.class).getFakePlayerConfig().dynamicFrequencyOutliersDrop();
         if (toDrop != 0 && outLiner > toDrop) {
             lastTimeBetweenAchievements = System.currentTimeMillis();
             return;
