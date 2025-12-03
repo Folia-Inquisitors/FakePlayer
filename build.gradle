@@ -45,7 +45,7 @@ dependencies {
     implementation('me.hsgamer:hscore-config-proxy:4.7.0')
     implementation('me.hsgamer:hscore-bukkit-config:4.7.0')
     compileOnly 'com.zaxxer:HikariCP:7.0.2'
-    compileOnly 'com.discordsrv:discordsrv:1.30.2'
+    compileOnly 'com.discordsrv:discordsrv:1.30.3'
 }
 
 def targetJavaVersion = 21
