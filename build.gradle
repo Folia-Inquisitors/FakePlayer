@@ -41,7 +41,7 @@ repositories {
 dependencies {
     compileOnly "dev.folia:folia-api:1.21.8-R0.1-SNAPSHOT"
     compileOnly 'me.clip:placeholderapi:2.11.7'
-    compileOnly 'com.github.retrooper:packetevents-spigot:2.10.1'
+    compileOnly 'com.github.retrooper:packetevents-spigot:2.11.0'
     implementation('me.hsgamer:hscore-config-proxy:4.7.1')
     implementation('me.hsgamer:hscore-bukkit-config:4.7.1')
     compileOnly 'com.zaxxer:HikariCP:7.0.2'
