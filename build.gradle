@@ -39,7 +39,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly "dev.folia:folia-api:1.21.11-R0.1-SNAPSHOT"
+    compileOnly "dev.folia:folia-api:26.1.2.build.8-stable"
     compileOnly 'me.clip:placeholderapi:2.12.2'
     compileOnly 'com.github.retrooper:packetevents-spigot:2.12.1'
     implementation('me.hsgamer:hscore-config-proxy:4.9.0')
