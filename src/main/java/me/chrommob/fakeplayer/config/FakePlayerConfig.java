@@ -3,13 +3,11 @@ package me.chrommob.fakeplayer.config;
 import me.hsgamer.hscore.config.annotation.Comment;
 import me.hsgamer.hscore.config.annotation.ConfigPath;
 
-import java.util.UUID;
-
 public interface FakePlayerConfig {
-    @ConfigPath("id")
-    @Comment("Server UUID")
+    @ConfigPath({"server", "id"})
+    @Comment("Unique server UUID. Required only when MySQL is enabled.")
     default String id() {
-        return UUID.randomUUID().toString();
+        return "";
     }
 
     @ConfigPath({"mysql", "enabled"})
@@ -21,7 +19,7 @@ public interface FakePlayerConfig {
     @ConfigPath({"mysql", "host"})
     @Comment("MySQL host")
     default String mysqlHost() {
-        return "localhost";
+        return "";
     }
 
     @ConfigPath({"mysql", "port"})
@@ -33,13 +31,13 @@ public interface FakePlayerConfig {
     @ConfigPath({"mysql", "database"})
     @Comment("MySQL database")
     default String mysqlDatabase() {
-        return "minecraft";
+        return "";
     }
 
     @ConfigPath({"mysql", "username"})
     @Comment("MySQL username")
     default String mysqlUsername() {
-        return "root";
+        return "";
     }
 
     @ConfigPath({"mysql", "password"})
@@ -48,50 +46,74 @@ public interface FakePlayerConfig {
         return "";
     }
 
-    @ConfigPath("min-fake-players")
+    @ConfigPath({"fake-players", "min"})
     @Comment("Minimum amount of fake players to appear on the server")
     default int minFakePlayers() {
-        return 0;
+        return 6;
     }
 
-    @ConfigPath("max-fake-players")
+    @ConfigPath({"fake-players", "max"})
     @Comment("Maximum amount of fake players to appear on the server")
     default int maxFakePlayers() {
         return 10;
     }
 
-    @ConfigPath("player-join-quit-frequency")
-    @Comment({"Frequency of fake players joining the server in ticks", "20 ticks = 1 second", "Set to -1 to use dynamic value based on real players"})
+    @ConfigPath({"activity", "join-leave", "frequency"})
+    @Comment({
+            "Fake activity timing.",
+            "Frequency is measured in ticks.",
+            "20 ticks = 1 second.",
+            "1200 ticks = 1 minute.",
+            "-1 = dynamic, learned from real server activity."
+    })
     default int playerJoinQuitFrequency() {
-        return 100;
+        return -1;
     }
 
-    @ConfigPath("fake-death-messages")
+    @ConfigPath({"activity", "deaths", "enabled"})
     @Comment("Whether to display fake death messages")
     default boolean fakeDeathMessages() {
         return true;
     }
 
-    @ConfigPath("fake-message-frequency")
-    @Comment({"Frequency of fake messages in ticks", "20 ticks = 1 second", "Set to -1 to use dynamic value based on real players"})
+    @ConfigPath({"activity", "deaths", "frequency"})
+    @Comment("Frequency of fake death messages in ticks. Set to -1 for dynamic timing.")
     default int fakeMessageFrequency() {
-        return 100;
+        return -1;
     }
 
-    @ConfigPath("fake-achievement-messages")
+    @ConfigPath({"activity", "achievements", "enabled"})
     @Comment("Whether to display fake achievement messages")
     default boolean fakeAchievementMessages() {
         return true;
     }
 
-    @ConfigPath("fake-achievement-frequency")
-    @Comment({"Frequency of fake achievement messages in ticks", "20 ticks = 1 second", "Set to -1 to use dynamic value based on real players"})
-    default int fakeAchievementFrequency() {
-        return 100;
+    @ConfigPath({"discordsrv", "forward", "join-leave"})
+    @Comment("Whether to forward fake join and leave messages to DiscordSRV")
+    default boolean discordSrvFakeJoinLeaveMessages() {
+        return true;
     }
 
-    @ConfigPath("dynamic-frequency-outliers-drop")
-    @Comment({"When the data is very farther than the usual, it will be dropped", "Set to 0 to drop basically everything", "Set to 100 to drop nothing"})
+    @ConfigPath({"discordsrv", "forward", "deaths"})
+    @Comment("Whether to forward fake death messages to DiscordSRV")
+    default boolean discordSrvFakeDeathMessages() {
+        return true;
+    }
+
+    @ConfigPath({"discordsrv", "forward", "achievements"})
+    @Comment("Whether to forward fake achievement messages to DiscordSRV")
+    default boolean discordSrvFakeAchievementMessages() {
+        return true;
+    }
+
+    @ConfigPath({"activity", "achievements", "frequency"})
+    @Comment("Frequency of fake achievement messages in ticks. Set to -1 for dynamic timing.")
+    default int fakeAchievementFrequency() {
+        return -1;
+    }
+
+    @ConfigPath({"learning", "outlier-drop-percent"})
+    @Comment({"Drops timing samples that are unusually far from normal.", "0 drops nearly everything.", "100 keeps everything."})
     default int dynamicFrequencyOutliersDrop() {
         return 97;
     }

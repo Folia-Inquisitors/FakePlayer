@@ -4,21 +4,28 @@ import com.github.retrooper.packetevents.PacketEvents;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import me.chrommob.fakeplayer.config.FakePlayerConfig;
 import me.chrommob.fakeplayer.data.Database;
-import me.chrommob.fakeplayer.data.FrequencyData;
 import me.chrommob.fakeplayer.data.FakeData;
+import me.chrommob.fakeplayer.data.FakePlayerStorage;
+import me.chrommob.fakeplayer.data.model.FakePlayerProfile;
+import me.chrommob.fakeplayer.data.model.FakePlayerProfileFactory;
+import me.chrommob.fakeplayer.data.model.StoredFakePlayerState;
 import me.chrommob.fakeplayer.impl.Debugger;
+import me.chrommob.fakeplayer.impl.FakeActivityScheduler;
 import me.chrommob.fakeplayer.impl.FakePlayerImpl;
+import me.chrommob.fakeplayer.impl.FakePlayerRegistry;
 import me.chrommob.fakeplayer.impl.PlayerCommand;
 import me.chrommob.fakeplayer.impl.PlayerCommandCompletion;
+import me.chrommob.fakeplayer.model.FakeActivityModel;
+import me.chrommob.fakeplayer.model.JoinQuitPopulationModel;
+import me.chrommob.fakeplayer.model.RealActivityTemplates;
 import me.chrommob.fakeplayer.packet.PlayerCount;
 import me.chrommob.fakeplayer.placeholder.PlayerCountPlaceholder;
 import me.hsgamer.hscore.bukkit.config.BukkitConfig;
 import me.hsgamer.hscore.config.proxy.ConfigGenerator;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextReplacementConfig;
-import net.kyori.adventure.text.serializer.json.JSONComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -27,30 +34,24 @@ import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.*;
-
-import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.IntSupplier;
 
 @SuppressWarnings("unused")
 public final class FakePlayer extends JavaPlugin implements Listener {
+    private final FakePlayerConfig fakePlayerConfig = ConfigGenerator.newInstance(FakePlayerConfig.class, new BukkitConfig(this));
+    private final FakePlayerRegistry fakePlayerRegistry = new FakePlayerRegistry(this);
     private Database database;
     private Debugger debugger;
-    private File percentagesFile;
-    private File mapFile;
-    private File deathPercentagesFile;
-    private File deathMapFile;
-    private File potentialFakePlayersFile;
-    private File frequenciesFile;
-    private final Yaml yaml = new Yaml();
-    private final FakePlayerConfig fakePlayerConfig = ConfigGenerator.newInstance(FakePlayerConfig.class, new BukkitConfig(this));
-    private final Map<String, FakePlayerImpl> fakePlayers = new HashMap<>();
-    private FrequencyData frequencyData;
-    private boolean isFolia = false;
+    private FakePlayerStorage storage;
+    private FakeActivityModel activityModel = FakeActivityModel.fromStoredState(StoredFakePlayerState.empty());
+    private FakeActivityScheduler activityScheduler;
+    private YamlConfiguration rawConfig;
+    private boolean folia;
+    private boolean startupComplete;
 
     @Override
     public void onLoad() {
@@ -61,283 +62,63 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        try {
-            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
-            isFolia = true;
-        } catch (ClassNotFoundException ignored) {
-        }
-
-        File dataFolder = new File(getDataFolder(), "data");
-        if (!dataFolder.exists()) {
-            dataFolder.mkdirs();
-        }
+        folia = detectFolia();
         debugger = new Debugger(this);
-        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            getLogger().info("PlaceholderAPI found, enabling support");
-            new PlayerCountPlaceholder().register();
-        }
-        percentagesFile = new File(dataFolder, "percentages.yml");
-        mapFile = new File(dataFolder, "map.yml");
-        deathPercentagesFile = new File(dataFolder, "deathPercentages.yml");
-        deathMapFile = new File(dataFolder, "deathMap.yml");
-        potentialFakePlayersFile = new File(dataFolder, "potentialFakePlayers.yml");
-        frequenciesFile = new File(dataFolder, "frequencies.yml");
-        if (!percentagesFile.exists()) {
-            try {
-                percentagesFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (!mapFile.exists()) {
-            try {
-                mapFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (!deathPercentagesFile.exists()) {
-            try {
-                deathPercentagesFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (!deathMapFile.exists()) {
-            try {
-                deathMapFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (!potentialFakePlayersFile.exists()) {
-            try {
-                potentialFakePlayersFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (!frequenciesFile.exists()) {
-            try {
-                frequenciesFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        String frequenciesFileString = readFromFile(frequenciesFile);
-        if (frequenciesFileString == null || frequenciesFileString.isEmpty()) {
-            frequencyData = new FrequencyData();
-        } else {
-            frequencyData = FrequencyData.fromString(frequenciesFileString);
-        }
-        loadData();
-        getCommand("reloadfakeplayer").setExecutor((sender, command, label, args) -> {
-            if (sender.hasPermission("fakeplayer.reload")) {
-                reloadConfig();
-                sender.sendMessage("Config reloaded");
-            }
-            return true;
-        });
-        getServer().getPluginManager().registerEvents(this, this);
-        getServer().getPluginManager().registerEvents(new PlayerCommand(), this);
-        getServer().getPluginManager().registerEvents(new PlayerCommandCompletion(), this);
-        PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
-        PacketEvents.getAPI().init();
-        if (fakePlayerConfig.mysqlEnabled()) {
-            database = new Database(UUID.fromString(fakePlayerConfig.id()),
-                    fakePlayerConfig.mysqlHost(),
-                    fakePlayerConfig.mysqlPort(),
-                    fakePlayerConfig.mysqlDatabase(),
-                    fakePlayerConfig.mysqlUsername(),
-                    fakePlayerConfig.mysqlPassword()
-            );
-        } else {
-            database = null;
-        }
-        startSchedulers();
-    }
-
-    private long shouldRunAdd = 0;
-    private long shouldRunDeath = 0;
-    private long shouldRunAchievement = 0;
-
-    private void startSchedulers() {
-        new Thread(() -> {
-            while (true) {
-                int addFrequency = fakePlayerConfig.playerJoinQuitFrequency();
-                int deathFrequency = fakePlayerConfig.fakeMessageFrequency();
-                int achievementFrequency = fakePlayerConfig.fakeAchievementFrequency();
-                boolean fakeDeathMessages = fakePlayerConfig.fakeDeathMessages();
-                boolean fakeAchievementMessages = fakePlayerConfig.fakeAchievementMessages();
-                if (addFrequency == -1) {
-                    addFrequency = frequencyData.getRandomPlayerJoinQuitFrequency();
-                }
-                if (deathFrequency == -1) {
-                    deathFrequency = frequencyData.getRandomMessageFrequency();
-                }
-                if (achievementFrequency == -1) {
-                    achievementFrequency = frequencyData.getRandomAchievementFrequency();
-                }
-                int lowest = getLowestFromThatIsNotMinusOne(addFrequency, deathFrequency, achievementFrequency);
-                lowest = (int) Math.min(lowest, getNearestShouldRun());
-                if (lowest == -1) {
-                    lowest = 100;
-                }
-                if (addFrequency != -1) {
-                    if (shouldRunAdd == 0) {
-                        shouldRunAdd = System.currentTimeMillis() + addFrequency * 50L;
-                    }
-                }
-                if (deathFrequency != -1) {
-                    if (shouldRunDeath == 0) {
-                        shouldRunDeath = System.currentTimeMillis() + deathFrequency * 50L;
-                    }
-                }
-                if (achievementFrequency != -1) {
-                    if (shouldRunAchievement == 0) {
-                        shouldRunAchievement = System.currentTimeMillis() + achievementFrequency * 50L;
-                    }
-                }
-                if (addFrequency != -1) {
-                    if (shouldRunAdd < System.currentTimeMillis()) {
-                        addTask.run();
-                        shouldRunAdd = System.currentTimeMillis() + addFrequency * 50L;
-                    }
-                }
-                if (deathFrequency != -1) {
-                    if (shouldRunDeath < System.currentTimeMillis() && fakeDeathMessages) {
-                        deathTask.run();
-                        shouldRunDeath = System.currentTimeMillis() + deathFrequency * 50L;
-                    }
-                }
-                if (achievementFrequency != -1) {
-                    if (shouldRunAchievement < System.currentTimeMillis() && fakeAchievementMessages) {
-                        achievementTask.run();
-                        shouldRunAchievement = System.currentTimeMillis() + achievementFrequency * 50L;
-                    }
-                }
-                try {
-                    Thread.sleep(lowest * 50L);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-    }
-
-    private int getLowestFromThatIsNotMinusOne(int number1, int number2, int number3) {
-        if (number1 == -1) {
-            if (number2 == -1) {
-                return number3;
-            }
-            if (number3 == -1) {
-                return number2;
-            }
-            return Math.min(number2, number3);
-        }
-        if (number2 == -1) {
-            if (number3 == -1) {
-                return number1;
-            }
-            return Math.min(number1, number3);
-        }
-        if (number3 == -1) {
-            return Math.min(number1, number2);
-        }
-        return Math.min(Math.min(number1, number2), number3);
-    }
-
-    private long getNearestShouldRun() {
-        long currentTime = System.currentTimeMillis();
-        long first = shouldRunAdd - currentTime;
-        long second = shouldRunDeath - currentTime;
-        long third = shouldRunAchievement - currentTime;
-        if (first < 0) {
-            first = Long.MAX_VALUE;
-        }
-        if (second < 0) {
-            second = Long.MAX_VALUE;
-        }
-        if (third < 0) {
-            third = Long.MAX_VALUE;
-        }
-        return Math.min(Math.min(first, second), third) / 50L;
-    }
-
-    private final Runnable addTask = () -> {
-        int minFakePlayers = fakePlayerConfig.minFakePlayers();
-        int maxFakePlayers = fakePlayerConfig.maxFakePlayers();
-        int random = (int) (Math.random() * (maxFakePlayers - minFakePlayers + 1) + minFakePlayers);
-        if (fakePlayers.size() < random) {
-            FakeData fakeData = getNextAvailableFakePlayer();
-            if (fakeData != null) {
-                debugger.debug("Adding fake player " + fakeData.getName());
-                addFakePlayer(fakeData);
-            }
-        }
-        if (fakePlayers.size() > random) {
-            int randomIndex = (int) (Math.random() * fakePlayers.size());
-            String name = (String) fakePlayers.keySet().toArray()[randomIndex];
-            debugger.debug("Removing fake player " + name);
-            removeFakePlayer(name);
-        }
-        if (database != null) {
-            database.updatePlayerCount(fakePlayers.size());
-        }
-    };
-
-    private final Runnable deathTask = () -> {
-        FakePlayerImpl fakePlayer = getRandomOnlineFakePlayer();
-        FakePlayerImpl fakePlayer2 = getRandomOnlineFakePlayer();
-        calculateDeathPercentage();
-        if (fakePlayer != null && fakePlayer2 != null) {
-            Component fakeDeathMessage = getDeathMessage();
-            if (fakeDeathMessage == null) {
-                return;
-            }
-            fakePlayer.death(fakeDeathMessage, fakePlayer2);
-        }
-    };
-
-    private final Runnable achievementTask = () -> {
-        FakePlayerImpl fakePlayer = getRandomOnlineFakePlayer();
-        calculatePercentage();
-        if (fakePlayer != null) {
-            Component fakeAchievementMessage = getAchievementMessage();
-            if (fakeAchievementMessage == null) {
-                return;
-            }
-            fakePlayer.achievement(fakeAchievementMessage);
-        }
-    };
-
-    public void reloadConfig() {
+        saveDefaultConfig();
         fakePlayerConfig.reloadConfig();
+        reloadRawConfig();
+        storage = new FakePlayerStorage(this, new File(getDataFolder(), "data"));
+        loadStoredData();
+        registerCommand();
+        registerHooks();
+        configureDatabase();
+        startActivityScheduler();
+        startupComplete = true;
     }
 
-    private final Map<String, FakeData> potentialFakePlayers = new HashMap<>();
+    @Override
+    public void onDisable() {
+        if (activityScheduler != null) {
+            activityScheduler.cancel();
+        }
+        if (startupComplete) {
+            saveData();
+        }
+        PacketEvents.getAPI().terminate();
+    }
+
+    @Override
+    public void reloadConfig() {
+        super.reloadConfig();
+        fakePlayerConfig.reloadConfig();
+        reloadRawConfig();
+        if (activityScheduler != null) {
+            activityScheduler.resetDelays();
+        }
+    }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        for (FakePlayerImpl fakePlayer : fakePlayers.values()) {
+        for (FakePlayerImpl fakePlayer : fakePlayerRegistry.getFakePlayerValues()) {
             fakePlayer.onPlayerJoin(event);
         }
         if (event.joinMessage() == null) {
             return;
         }
-        frequencyData.newTimeBetweenJoins();
+        learnJoinQuitActivity();
+
+        String playerName = event.getPlayer().getName();
         boolean isExempted = event.getPlayer().hasPermission("fakeplayer.exempt");
-        if (potentialFakePlayers.get(event.getPlayer().getName()) == null) {
-            if (isExempted) {
-                return;
-            }
-            potentialFakePlayers.put(event.getPlayer().getName(), new FakeData(event.getPlayer(), event));
-        } else {
+        FakePlayerProfile knownFakeData = fakePlayerRegistry.getPotentialFakePlayer(playerName);
+        if (knownFakeData == null) {
             if (!isExempted) {
-                return;
+                fakePlayerRegistry.addPotentialFakePlayer(playerName, FakePlayerProfileFactory.from(event.getPlayer(), event));
             }
-            potentialFakePlayers.remove(event.getPlayer().getName());
-            removeFakePlayer(event.getPlayer().getName());
+            return;
+        }
+        if (isExempted) {
+            fakePlayerRegistry.removePotentialFakePlayer(playerName);
+            removeFakePlayer(playerName);
         }
     }
 
@@ -346,286 +127,264 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         if (event.quitMessage() == null) {
             return;
         }
-        frequencyData.newTimeBetweenJoins();
-        if (potentialFakePlayers.get(event.getPlayer().getName()) == null) {
-            return;
+        learnJoinQuitActivity();
+        FakePlayerProfile fakeData = fakePlayerRegistry.getPotentialFakePlayer(event.getPlayer().getName());
+        if (fakeData != null) {
+            fakePlayerRegistry.addPotentialFakePlayer(event.getPlayer().getName(), fakeData.withQuitMessage(event.quitMessage()));
         }
-        potentialFakePlayers.get(event.getPlayer().getName()).setQuitMessage(event.quitMessage());
     }
-
-    private Component getAchievementMessage() {
-        if (percentages.isEmpty()) {
-            return null;
-        }
-        return percentages.get((int) (Math.random() * percentages.size()));
-    }
-
-    private Component getDeathMessage() {
-        if (deathPercentages.isEmpty()) {
-            return null;
-        }
-        return deathPercentages.get((int) (Math.random() * deathPercentages.size()));
-    }
-
-    private List<Component> percentages;
-    private Map<String, Integer> map;
 
     @EventHandler
     public void onPlayerAchievement(PlayerAdvancementDoneEvent event) {
         if (event.message() == null) {
             return;
         }
-        TextReplacementConfig replacementConfig = TextReplacementConfig.builder().match(event.getPlayer().getName())
-                .replacement("%player%").build();
-        TextReplacementConfig replacementConfig2 = TextReplacementConfig.builder()
-                .match(PlainTextComponentSerializer.plainText().serialize(event.getPlayer().displayName()))
-                .replacement("%player%").build();
-        Component message = event.message().replaceText(replacementConfig).replaceText(replacementConfig2);
-        String messageString = JSONComponentSerializer.json().serialize(message);
-        if (map.get(messageString) == null) {
-            map.put(messageString, 1);
-        } else {
-            int count = map.get(messageString);
-            map.put(messageString, count + 1);
-        }
-        frequencyData.newTimeBetweenAchievements();
+        Component template = RealActivityTemplates.achievementTemplate(event.getPlayer(), event.message());
+        learnAchievementActivity(template);
     }
-
-    private List<Component> deathPercentages;
-    private Map<String, Integer> deathMap;
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (event.deathMessage() == null) {
             return;
         }
-        List<String> playerNames = new ArrayList<>();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            playerNames.add(player.getName());
-            playerNames.add(player.getDisplayName());
-        }
-        TextReplacementConfig replacementConfig = TextReplacementConfig.builder().match(event.getPlayer().getName())
-                .replacement("%player%").build();
-        TextReplacementConfig replacementConfig2 = TextReplacementConfig.builder()
-                .match(PlainTextComponentSerializer.plainText().serialize(event.getPlayer().displayName()))
-                .replacement("%player%").build();
-        Component message = event.deathMessage().replaceText(replacementConfig).replaceText(replacementConfig2);
-        String messageString = JSONComponentSerializer.json().serialize(message);
-        String foundName = playerNames.stream().filter(messageString::contains).findAny().orElse(null);
-        if (foundName != null) {
-            messageString = messageString.replaceAll(foundName, "%player2%");
-        }
-        if (deathMap.get(messageString) == null) {
-            deathMap.put(messageString, 1);
-        } else {
-            int count = deathMap.get(messageString);
-            deathMap.put(messageString, count + 1);
-        }
-        frequencyData.newTimeBetweenMessages();
+        String template = RealActivityTemplates.deathTemplate(event.getPlayer(), event.deathMessage(), Bukkit.getOnlinePlayers());
+        learnDeathActivity(template);
     }
 
-    private void calculateDeathPercentage() {
-        int total = 0;
-        for (int i : deathMap.values()) {
-            total += i;
-        }
-        deathPercentages.clear();
-        for (Map.Entry<String, Integer> entry : deathMap.entrySet()) {
-            int count = entry.getValue();
-            Component message = JSONComponentSerializer.json().deserialize(entry.getKey());
-            int percentage = (int) ((count / (double) total) * 100);
-            for (int i = 0; i < percentage; i++) {
-                deathPercentages.add(message);
-            }
+    private void loadStoredData() {
+        StoredFakePlayerState storedData = storage.load();
+        activityModel = FakeActivityModel.fromStoredState(storedData);
+        fakePlayerRegistry.loadPotentialFakePlayers(storedData.potentialFakePlayers());
+        debugger.debug("Loaded " + fakePlayerRegistry.potentialSize() + " potential fake players, "
+                + activityModel.achievementTemplateCount() + " achievement templates, "
+                + activityModel.deathTemplateCount() + " death templates");
+    }
+
+    private void registerCommand() {
+        PluginCommand reloadCommand = getCommand("reloadfakeplayer");
+        if (reloadCommand != null) {
+            reloadCommand.setExecutor((sender, command, label, args) -> {
+                if (sender.hasPermission("fakeplayer.reload")) {
+                    reloadConfig();
+                    sender.sendMessage("Config reloaded");
+                }
+                return true;
+            });
         }
     }
 
-    private void calculatePercentage() {
-        int total = 0;
-        for (int i : map.values()) {
-            total += i;
+    private void registerHooks() {
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            getLogger().info("PlaceholderAPI found, enabling support");
+            new PlayerCountPlaceholder().register();
         }
-        percentages.clear();
-        for (Map.Entry<String, Integer> entry : map.entrySet()) {
-            int count = entry.getValue();
-            Component message = JSONComponentSerializer.json().deserialize(entry.getKey());
-            int percentage = (int) ((count / (double) total) * 100);
-            for (int i = 0; i < percentage; i++) {
-                percentages.add(message);
+        getServer().getPluginManager().registerEvents(this, this);
+        getServer().getPluginManager().registerEvents(new PlayerCommand(), this);
+        getServer().getPluginManager().registerEvents(new PlayerCommandCompletion(), this);
+        PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
+        PacketEvents.getAPI().init();
+    }
+
+    private void configureDatabase() {
+        if (mysqlEnabled()) {
+            UUID serverUuid;
+            try {
+                serverUuid = UUID.fromString(serverId());
+            } catch (RuntimeException exception) {
+                getLogger().warning("MySQL is enabled, but server.id is not a valid UUID. Disabling MySQL support.");
+                database = null;
+                return;
             }
+            database = new Database(serverUuid,
+                    mysqlHost(),
+                    mysqlPort(),
+                    mysqlDatabase(),
+                    mysqlUsername(),
+                    mysqlPassword()
+            );
+        } else {
+            database = null;
         }
     }
 
-    @Override
-    public void onDisable() {
-        saveData();
-        PacketEvents.getAPI().terminate();
+    private void startActivityScheduler() {
+        debugger.debug("Starting fake activity scheduler in " + (folia ? "Folia" : "Bukkit") + " mode");
+        activityScheduler = new FakeActivityScheduler(this, folia,
+                () -> resolveFrequency(playerJoinQuitFrequency(),
+                        activityModel::getRandomJoinQuitFrequency),
+                this::fakeDeathMessages,
+                () -> resolveFrequency(fakeMessageFrequency(),
+                        activityModel::getRandomDeathMessageFrequency),
+                this::fakeAchievementMessages,
+                () -> resolveFrequency(fakeAchievementFrequency(),
+                        activityModel::getRandomAchievementFrequency),
+                addTask,
+                deathTask,
+                achievementTask);
+        activityScheduler.start();
     }
 
-    private void loadData() {
-        Object percentagesObject = loadFromFile(percentagesFile);
-        Object mapObject = loadFromFile(mapFile);
-        Object deathPercentagesObject = loadFromFile(deathPercentagesFile);
-        Object deathMapObject = loadFromFile(deathMapFile);
+    private int resolveFrequency(int configuredFrequency, IntSupplier dynamicFrequency) {
+        if (configuredFrequency != -1) {
+            return configuredFrequency;
+        }
+        return dynamicFrequency.getAsInt();
+    }
 
-        if (percentagesObject instanceof List) {
-            List<String> percentagesDumpable = (List<String>) percentagesObject;
-            percentages = new ArrayList<>();
-            for (String string : percentagesDumpable) {
-                percentages.add(JSONComponentSerializer.json().deserialize(string));
-            }
-        } else {
-            percentages = new ArrayList<>();
-        }
-        if (mapObject instanceof Map) {
-            map = (Map<String, Integer>) mapObject;
-        } else {
-            map = new HashMap<>();
-        }
-        if (deathPercentagesObject instanceof List) {
-            List<String> deathPercentagesDumpable = (List<String>) deathPercentagesObject;
-            deathPercentages = new ArrayList<>();
-            for (String string : deathPercentagesDumpable) {
-                deathPercentages.add(JSONComponentSerializer.json().deserialize(string));
-            }
-        } else {
-            deathPercentages = new ArrayList<>();
-        }
-        if (deathMapObject instanceof Map) {
-            deathMap = (Map<String, Integer>) deathMapObject;
-        } else {
-            deathMap = new HashMap<>();
-        }
-
-        Object potentialFakePlayersObject = loadFromFile(potentialFakePlayersFile);
-        if (potentialFakePlayersObject instanceof Map) {
-            Map<String, String> potentialFakePlayersDumpable = (Map<String, String>) potentialFakePlayersObject;
-            for (Map.Entry<String, String> entry : potentialFakePlayersDumpable.entrySet()) {
-                potentialFakePlayers.put(entry.getKey(), FakeData.fromString(entry.getValue()));
-            }
+    private void learnJoinQuitActivity() {
+        if (activityModel.learnJoinQuit(System.currentTimeMillis(), dynamicFrequencyOutliersDrop())) {
+            debugger.debug("New time between joins: " + activityModel.frequencies().joinQuitFrequency().samples());
         }
     }
 
-    private String readFromFile(File file) {
+    private void learnDeathActivity(String deathTemplate) {
+        if (activityModel.learnDeathMessage(deathTemplate, System.currentTimeMillis(), dynamicFrequencyOutliersDrop())) {
+            debugger.debug("New time between messages: " + activityModel.frequencies().deathMessageFrequency().samples());
+        }
+    }
+
+    private void learnAchievementActivity(Component achievementTemplate) {
+        if (activityModel.learnAchievement(achievementTemplate, System.currentTimeMillis(), dynamicFrequencyOutliersDrop())) {
+            debugger.debug("New time between achievements: " + activityModel.frequencies().achievementFrequency().samples());
+        }
+    }
+
+    private boolean detectFolia() {
         try {
-            return Files.readString(file.toPath());
-        } catch (IOException e) {
-            e.printStackTrace();
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return true;
+        } catch (ClassNotFoundException ignored) {
+            return false;
         }
-        return null;
+    }
+
+    private final Runnable addTask = () -> {
+        int minFakePlayers = Math.max(0, minFakePlayers());
+        int maxFakePlayers = Math.max(minFakePlayers, maxFakePlayers());
+        JoinQuitPopulationModel.Decision decision = activityModel.nextJoinQuitDecision(
+                minFakePlayers,
+                maxFakePlayers,
+                fakePlayerRegistry.size(),
+                fakePlayerRegistry.availableFakePlayerCount()
+        );
+
+        if (decision.action() == JoinQuitPopulationModel.Action.JOIN) {
+            FakePlayerProfile fakeData = fakePlayerRegistry.getNextAvailableFakePlayer(
+                    profile -> activityModel.isPreferredFakePlayerProfile(profile.name())
+            );
+            if (fakeData == null) {
+                debugger.debug("No available fake player profile to add");
+            } else {
+                debugger.debug("Adding fake player " + fakeData.name()
+                        + " toward target " + decision.targetFakePlayers());
+                activityModel.recordFakePlayerProfileUsed(fakeData.name());
+                addFakePlayer(fakeData);
+            }
+        } else if (decision.action() == JoinQuitPopulationModel.Action.QUIT) {
+            String name = fakePlayerRegistry.getRandomFakePlayerName();
+            if (name != null) {
+                debugger.debug("Removing fake player " + name
+                        + " toward target " + decision.targetFakePlayers());
+                activityModel.recordFakePlayerProfileUsed(name);
+                removeFakePlayer(name);
+            }
+        }
+        if (database != null) {
+            database.updatePlayerCount(fakePlayerRegistry.size());
+        }
+    };
+
+    private final Runnable deathTask = () -> {
+        FakePlayerImpl fakePlayer = getRandomOnlineFakePlayer();
+        if (fakePlayer == null) {
+            return;
+        }
+        FakePlayerImpl otherFakePlayer = getRandomOnlineFakePlayer(fakePlayer);
+        Component fakeDeathMessage = getDeathMessage(fakePlayer, otherFakePlayer != null);
+        if (fakeDeathMessage != null) {
+            if (otherFakePlayer == null) {
+                otherFakePlayer = fakePlayer;
+            }
+            fakePlayer.death(fakeDeathMessage, otherFakePlayer);
+        }
+    };
+
+    private final Runnable achievementTask = () -> {
+        FakePlayerImpl fakePlayer = getRandomOnlineFakePlayer();
+        if (fakePlayer == null) {
+            return;
+        }
+        Component fakeAchievementMessage = getAchievementMessage(fakePlayer);
+        if (fakeAchievementMessage != null) {
+            fakePlayer.achievement(fakeAchievementMessage);
+        }
+    };
+
+    private Component getAchievementMessage(FakePlayerImpl fakePlayer) {
+        return activityModel.nextAchievementMessage(fakePlayer.getProfileName());
+    }
+
+    private Component getDeathMessage(FakePlayerImpl fakePlayer, boolean hasDistinctKiller) {
+        return activityModel.nextDeathMessage(fakePlayer.getProfileName(), hasDistinctKiller);
     }
 
     private void saveData() {
-        List<String> percentagesDumpable = new ArrayList<>();
-        List<String> deathPercentagesDumpable = new ArrayList<>();
-        for (Component component : percentages) {
-            percentagesDumpable.add(JSONComponentSerializer.json().serialize(component));
+        if (storage == null) {
+            return;
         }
-        for (Component component : deathPercentages) {
-            deathPercentagesDumpable.add(JSONComponentSerializer.json().serialize(component));
-        }
-
-        String percentagesString = yaml.dump(percentagesDumpable);
-        String mapString = yaml.dump(map);
-        String deathPercentagesString = yaml.dump(deathPercentagesDumpable);
-        String deathMapString = yaml.dump(deathMap);
-
-        Map<String, String> potentialFakePlayersDumpable = new HashMap<>();
-        for (Map.Entry<String, FakeData> entry : potentialFakePlayers.entrySet()) {
-            potentialFakePlayersDumpable.put(entry.getKey(), entry.getValue().toString());
-        }
-        String potentialFakePlayersString = yaml.dump(potentialFakePlayersDumpable);
-
-        writeToFile(percentagesFile, percentagesString);
-        writeToFile(mapFile, mapString);
-        writeToFile(deathPercentagesFile, deathPercentagesString);
-        writeToFile(deathMapFile, deathMapString);
-        writeToFile(potentialFakePlayersFile, potentialFakePlayersString);
-        writeToFile(frequenciesFile, frequencyData.toString());
-    }
-
-    private Object loadFromFile(File file) {
-        try {
-            return yaml.load(Files.newBufferedReader(file.toPath()));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private void writeToFile(File file, String string) {
-        try {
-            file.createNewFile();
-            // Overwrite the previous content
-            Files.write(file.toPath(), string.getBytes(), TRUNCATE_EXISTING);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        storage.save(activityModel.toStoredState(fakePlayerRegistry.getPotentialFakePlayers()));
     }
 
     public Map<String, FakePlayerImpl> getFakePlayers() {
-        return new HashMap<>(fakePlayers);
+        return fakePlayerRegistry.getFakePlayers();
     }
 
     public void removeFakePlayer(String name) {
-        if (fakePlayers.get(name) == null) {
-            return;
-        }
-        fakePlayers.get(name).quit();
-        debugger.debug("Removed fake player " + name + " with UUID " + fakePlayers.get(name).getUuid());
-        fakePlayers.remove(name);
+        fakePlayerRegistry.removeFakePlayer(name);
     }
 
+    public void addFakePlayer(FakePlayerProfile fakeData) {
+        fakePlayerRegistry.addFakePlayer(fakeData);
+    }
+
+    @Deprecated
     public void addFakePlayer(FakeData fakeData) {
-        FakePlayerImpl fakePlayer = new FakePlayerImpl(fakeData);
-        Bukkit.getPluginManager().registerEvents(fakePlayer, this);
-        fakePlayers.put(fakeData.getName(), fakePlayer);
-        debugger.debug("Added fake player " + fakeData.getName() + " with UUID " + fakePlayer.getUuid());
+        if (fakeData != null) {
+            addFakePlayer(fakeData.toProfile());
+        }
     }
 
     public FakePlayerImpl getRandomFakePlayer() {
-        if (fakePlayers.isEmpty()) {
-            return null;
-        }
-        int randomIndex = (int) (Math.random() * fakePlayers.size());
-        return (FakePlayerImpl) fakePlayers.values().toArray()[randomIndex];
+        return fakePlayerRegistry.getRandomFakePlayer();
     }
 
     public FakePlayerImpl getRandomOnlineFakePlayer() {
-        List<FakePlayerImpl> onlineFakePlayers = fakePlayers.values().stream()
-                .filter(FakePlayerImpl::isOnline)
-                .toList();
-        if (onlineFakePlayers.isEmpty()) {
-            return null;
-        }
-        int randomIndex = (int) (Math.random() * onlineFakePlayers.size());
-        return onlineFakePlayers.get(randomIndex);
+        return fakePlayerRegistry.getRandomOnlineFakePlayer();
     }
 
-    public FakeData getNextAvailableFakePlayer() {
-        for (FakeData fakeData : potentialFakePlayers.values()) {
-            if (!fakePlayers.containsKey(fakeData.getName()) && fakeData.isReady()
-                    && Bukkit.getPlayer(fakeData.getName()) == null) {
-                return fakeData;
-            }
-        }
-        return null;
+    public FakePlayerImpl getRandomOnlineFakePlayer(FakePlayerImpl excludedFakePlayer) {
+        return fakePlayerRegistry.getRandomOnlineFakePlayer(excludedFakePlayer);
+    }
+
+    public FakePlayerProfile getNextAvailableFakePlayer() {
+        return fakePlayerRegistry.getNextAvailableFakePlayer();
     }
 
     public boolean isFakePlayer(String name) {
-        return fakePlayers.get(name) != null;
+        return fakePlayerRegistry.isFakePlayer(name);
     }
 
     public boolean isFakePlayer(Player player) {
-        return fakePlayers.get(player.getName()) != null;
+        return fakePlayerRegistry.isFakePlayer(player);
     }
 
     public void addSelf(String name, FakePlayerImpl fakePlayer) {
-        fakePlayers.put(name, fakePlayer);
+        fakePlayerRegistry.addSelf(name, fakePlayer);
     }
 
     public boolean isFolia() {
-        return isFolia;
+        return folia;
     }
 
     public Debugger getDebugger() {
@@ -634,5 +393,137 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     public FakePlayerConfig getFakePlayerConfig() {
         return fakePlayerConfig;
+    }
+
+    public boolean discordSrvFakeJoinLeaveMessages() {
+        return configBoolean("discordsrv.forward.join-leave",
+                "discordsrv.forward-fake-join-leave-messages",
+                fakePlayerConfig.discordSrvFakeJoinLeaveMessages());
+    }
+
+    public boolean discordSrvFakeDeathMessages() {
+        return configBoolean("discordsrv.forward.deaths",
+                "discordsrv.forward-fake-death-messages",
+                fakePlayerConfig.discordSrvFakeDeathMessages());
+    }
+
+    public boolean discordSrvFakeAchievementMessages() {
+        return configBoolean("discordsrv.forward.achievements",
+                "discordsrv.forward-fake-achievement-messages",
+                fakePlayerConfig.discordSrvFakeAchievementMessages());
+    }
+
+    private void reloadRawConfig() {
+        rawConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "config.yml"));
+    }
+
+    private String serverId() {
+        return configString("server.id", "id", fakePlayerConfig.id());
+    }
+
+    private boolean mysqlEnabled() {
+        return configBoolean("mysql.enabled", "mysql.enabled", fakePlayerConfig.mysqlEnabled());
+    }
+
+    private String mysqlHost() {
+        return configString("mysql.host", "mysql.host", fakePlayerConfig.mysqlHost());
+    }
+
+    private int mysqlPort() {
+        return configInt("mysql.port", "mysql.port", fakePlayerConfig.mysqlPort());
+    }
+
+    private String mysqlDatabase() {
+        return configString("mysql.database", "mysql.database", fakePlayerConfig.mysqlDatabase());
+    }
+
+    private String mysqlUsername() {
+        return configString("mysql.username", "mysql.username", fakePlayerConfig.mysqlUsername());
+    }
+
+    private String mysqlPassword() {
+        return configString("mysql.password", "mysql.password", fakePlayerConfig.mysqlPassword());
+    }
+
+    private int minFakePlayers() {
+        return configInt("fake-players.min", "min-fake-players", fakePlayerConfig.minFakePlayers());
+    }
+
+    private int maxFakePlayers() {
+        return configInt("fake-players.max", "max-fake-players", fakePlayerConfig.maxFakePlayers());
+    }
+
+    private int playerJoinQuitFrequency() {
+        return configInt("activity.join-leave.frequency",
+                "player-join-quit-frequency",
+                fakePlayerConfig.playerJoinQuitFrequency());
+    }
+
+    private boolean fakeDeathMessages() {
+        return configBoolean("activity.deaths.enabled", "fake-death-messages", fakePlayerConfig.fakeDeathMessages());
+    }
+
+    private int fakeMessageFrequency() {
+        return configInt("activity.deaths.frequency", "fake-message-frequency", fakePlayerConfig.fakeMessageFrequency());
+    }
+
+    private boolean fakeAchievementMessages() {
+        return configBoolean("activity.achievements.enabled",
+                "fake-achievement-messages",
+                fakePlayerConfig.fakeAchievementMessages());
+    }
+
+    private int fakeAchievementFrequency() {
+        return configInt("activity.achievements.frequency",
+                "fake-achievement-frequency",
+                fakePlayerConfig.fakeAchievementFrequency());
+    }
+
+    private int dynamicFrequencyOutliersDrop() {
+        return configInt("learning.outlier-drop-percent",
+                "dynamic-frequency-outliers-drop",
+                fakePlayerConfig.dynamicFrequencyOutliersDrop());
+    }
+
+    private int configInt(String path, String legacyPath, int defaultValue) {
+        if (rawConfig != null && rawConfig.contains(path)) {
+            int value = rawConfig.getInt(path);
+            if (value == defaultValue && rawConfig.contains(legacyPath)) {
+                return rawConfig.getInt(legacyPath);
+            }
+            return value;
+        }
+        if (rawConfig != null && rawConfig.contains(legacyPath)) {
+            return rawConfig.getInt(legacyPath);
+        }
+        return defaultValue;
+    }
+
+    private boolean configBoolean(String path, String legacyPath, boolean defaultValue) {
+        if (rawConfig != null && rawConfig.contains(path)) {
+            boolean value = rawConfig.getBoolean(path);
+            if (value == defaultValue && rawConfig.contains(legacyPath)) {
+                return rawConfig.getBoolean(legacyPath);
+            }
+            return value;
+        }
+        if (rawConfig != null && rawConfig.contains(legacyPath)) {
+            return rawConfig.getBoolean(legacyPath);
+        }
+        return defaultValue;
+    }
+
+    private String configString(String path, String legacyPath, String defaultValue) {
+        if (rawConfig != null && rawConfig.contains(path)) {
+            String value = rawConfig.getString(path, defaultValue);
+            if ((value == null || value.equals(defaultValue)) && rawConfig.contains(legacyPath)) {
+                return rawConfig.getString(legacyPath, defaultValue);
+            }
+            return value;
+        }
+        if (rawConfig != null && rawConfig.contains(legacyPath)) {
+            return rawConfig.getString(legacyPath, defaultValue);
+        }
+        return defaultValue;
     }
 }
