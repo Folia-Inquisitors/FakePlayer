@@ -15,6 +15,9 @@ import me.chrommob.fakeplayer.impl.FakePlayerImpl;
 import me.chrommob.fakeplayer.impl.FakePlayerRegistry;
 import me.chrommob.fakeplayer.impl.PlayerCommand;
 import me.chrommob.fakeplayer.impl.PlayerCommandCompletion;
+import me.chrommob.fakeplayer.identity.ExemptPlayerStorage;
+import me.chrommob.fakeplayer.identity.PlayerTrustTracker;
+import me.chrommob.fakeplayer.interaction.FakeInteractionGuard;
 import me.chrommob.fakeplayer.model.FakeActivityModel;
 import me.chrommob.fakeplayer.model.JoinQuitPopulationModel;
 import me.chrommob.fakeplayer.model.RealActivityTemplates;
@@ -36,6 +39,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntSupplier;
@@ -49,6 +53,8 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private FakePlayerStorage storage;
     private FakeActivityModel activityModel = FakeActivityModel.fromStoredState(StoredFakePlayerState.empty());
     private FakeActivityScheduler activityScheduler;
+    private PlayerTrustTracker playerTrustTracker;
+    private FakeInteractionGuard fakeInteractionGuard;
     private YamlConfiguration rawConfig;
     private boolean folia;
     private boolean startupComplete;
@@ -67,6 +73,8 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         saveDefaultConfig();
         fakePlayerConfig.reloadConfig();
         reloadRawConfig();
+        playerTrustTracker = new PlayerTrustTracker(new ExemptPlayerStorage(this, new File(getDataFolder(), "data")));
+        playerTrustTracker.load();
         storage = new FakePlayerStorage(this, new File(getDataFolder(), "data"));
         loadStoredData();
         registerCommand();
@@ -84,6 +92,9 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         if (startupComplete) {
             saveData();
         }
+        if (playerTrustTracker != null) {
+            playerTrustTracker.save();
+        }
         PacketEvents.getAPI().terminate();
     }
 
@@ -92,6 +103,9 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         super.reloadConfig();
         fakePlayerConfig.reloadConfig();
         reloadRawConfig();
+        if (fakeInteractionGuard != null) {
+            fakeInteractionGuard.reload();
+        }
         if (activityScheduler != null) {
             activityScheduler.resetDelays();
         }
@@ -99,6 +113,12 @@ public final class FakePlayer extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        boolean trustExempted = playerTrustTracker != null
+                && playerTrustTracker.recordJoin(event.getPlayer(), identityExemptAfterJoins());
+        if (trustExempted) {
+            fakePlayerRegistry.removePotentialFakePlayer(event.getPlayer().getName());
+            removeFakePlayer(event.getPlayer().getName());
+        }
         for (FakePlayerImpl fakePlayer : fakePlayerRegistry.getFakePlayerValues()) {
             fakePlayer.onPlayerJoin(event);
         }
@@ -108,7 +128,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         learnJoinQuitActivity();
 
         String playerName = event.getPlayer().getName();
-        boolean isExempted = event.getPlayer().hasPermission("fakeplayer.exempt");
+        boolean isExempted = event.getPlayer().hasPermission("fakeplayer.exempt") || trustExempted;
         FakePlayerProfile knownFakeData = fakePlayerRegistry.getPotentialFakePlayer(playerName);
         if (knownFakeData == null) {
             if (!isExempted) {
@@ -156,6 +176,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         StoredFakePlayerState storedData = storage.load();
         activityModel = FakeActivityModel.fromStoredState(storedData);
         fakePlayerRegistry.loadPotentialFakePlayers(storedData.potentialFakePlayers());
+        fakePlayerRegistry.removePotentialFakePlayers(profile -> isExemptPlayerName(profile.name()));
         debugger.debug("Loaded " + fakePlayerRegistry.potentialSize() + " potential fake players, "
                 + activityModel.achievementTemplateCount() + " achievement templates, "
                 + activityModel.deathTemplateCount() + " death templates");
@@ -182,6 +203,8 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new PlayerCommand(), this);
         getServer().getPluginManager().registerEvents(new PlayerCommandCompletion(), this);
+        fakeInteractionGuard = new FakeInteractionGuard(this);
+        getServer().getPluginManager().registerEvents(fakeInteractionGuard, this);
         PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
         PacketEvents.getAPI().init();
     }
@@ -375,6 +398,20 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         return fakePlayerRegistry.isFakePlayer(name);
     }
 
+    public boolean isSuspectedFakePlayerName(String name) {
+        if (name == null || isExemptPlayerName(name)) {
+            return false;
+        }
+        if (Bukkit.getOnlinePlayers().stream().anyMatch(player -> player.getName().equalsIgnoreCase(name))) {
+            return false;
+        }
+        return fakePlayerRegistry.isFakePlayer(name) || fakePlayerRegistry.isPotentialFakePlayer(name);
+    }
+
+    public boolean isExemptPlayerName(String name) {
+        return playerTrustTracker != null && playerTrustTracker.isExemptName(name);
+    }
+
     public boolean isFakePlayer(Player player) {
         return fakePlayerRegistry.isFakePlayer(player);
     }
@@ -411,6 +448,22 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         return configBoolean("discordsrv.forward.achievements",
                 "discordsrv.forward-fake-achievement-messages",
                 fakePlayerConfig.discordSrvFakeAchievementMessages());
+    }
+
+    public boolean tpaGuardEnabled() {
+        return configBoolean("interactions.tpa-guard.enabled",
+                "interactions.tpa-guard.enabled",
+                fakePlayerConfig.tpaGuardEnabled());
+    }
+
+    public String tpaGuardDenyMessage() {
+        return configString("interactions.tpa-guard.deny-message",
+                "interactions.tpa-guard.deny-message",
+                fakePlayerConfig.tpaGuardDenyMessage());
+    }
+
+    public List<String> tpaGuardCommandPatterns() {
+        return configStringList("interactions.tpa-guard.command-patterns", fakePlayerConfig.tpaGuardCommandPatterns());
     }
 
     private void reloadRawConfig() {
@@ -485,6 +538,12 @@ public final class FakePlayer extends JavaPlugin implements Listener {
                 fakePlayerConfig.dynamicFrequencyOutliersDrop());
     }
 
+    private int identityExemptAfterJoins() {
+        return configInt("identity.exempt-after-joins",
+                "identity.exempt-after-joins",
+                fakePlayerConfig.identityExemptAfterJoins());
+    }
+
     private int configInt(String path, String legacyPath, int defaultValue) {
         if (rawConfig != null && rawConfig.contains(path)) {
             int value = rawConfig.getInt(path);
@@ -523,6 +582,16 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         }
         if (rawConfig != null && rawConfig.contains(legacyPath)) {
             return rawConfig.getString(legacyPath, defaultValue);
+        }
+        return defaultValue;
+    }
+
+    private List<String> configStringList(String path, List<String> defaultValue) {
+        if (rawConfig != null && rawConfig.contains(path)) {
+            List<String> value = rawConfig.getStringList(path);
+            if (!value.isEmpty()) {
+                return value;
+            }
         }
         return defaultValue;
     }

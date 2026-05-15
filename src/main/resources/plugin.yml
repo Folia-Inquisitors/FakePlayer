@@ -20,3 +20,6 @@ permissions:
   fakeplayer.exempt:
     description: Allows the player to bypass the FakePlayer plugin
     default: op
+  fakeplayer.interaction.bypass:
+    description: Allows the player to bypass fake-player interaction protections
+    default: op

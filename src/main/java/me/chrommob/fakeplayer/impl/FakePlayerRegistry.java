@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,6 +56,11 @@ public final class FakePlayerRegistry {
 
     public void removePotentialFakePlayer(String name) {
         potentialFakePlayers.remove(name);
+        potentialFakePlayers.keySet().removeIf(candidate -> candidate.equalsIgnoreCase(name));
+    }
+
+    public void removePotentialFakePlayers(Predicate<FakePlayerProfile> predicate) {
+        potentialFakePlayers.values().removeIf(predicate);
     }
 
     public void removeFakePlayer(String name) {
@@ -142,7 +148,17 @@ public final class FakePlayerRegistry {
     }
 
     public boolean isFakePlayer(String name) {
-        return fakePlayers.containsKey(name);
+        return fakePlayers.containsKey(name) || fakePlayers.keySet().stream().anyMatch(candidate -> candidate.equalsIgnoreCase(name));
+    }
+
+    public boolean isPotentialFakePlayer(String name) {
+        if (name == null) {
+            return false;
+        }
+        String normalizedName = name.toLowerCase(Locale.ROOT);
+        return potentialFakePlayers.keySet().stream()
+                .map(candidate -> candidate.toLowerCase(Locale.ROOT))
+                .anyMatch(normalizedName::equals);
     }
 
     public boolean isFakePlayer(Player player) {

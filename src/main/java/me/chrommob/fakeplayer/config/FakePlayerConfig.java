@@ -3,6 +3,8 @@ package me.chrommob.fakeplayer.config;
 import me.hsgamer.hscore.config.annotation.Comment;
 import me.hsgamer.hscore.config.annotation.ConfigPath;
 
+import java.util.List;
+
 public interface FakePlayerConfig {
     @ConfigPath({"server", "id"})
     @Comment("Unique server UUID. Required only when MySQL is enabled.")
@@ -116,6 +118,33 @@ public interface FakePlayerConfig {
     @Comment({"Drops timing samples that are unusually far from normal.", "0 drops nearly everything.", "100 keeps everything."})
     default int dynamicFrequencyOutliersDrop() {
         return 97;
+    }
+
+    @ConfigPath({"identity", "exempt-after-joins"})
+    @Comment("Exempt a real player from being used as a fake player after this many real joins.")
+    default int identityExemptAfterJoins() {
+        return 3;
+    }
+
+    @ConfigPath({"interactions", "tpa-guard", "enabled"})
+    @Comment("Whether to block TPA-like commands targeting suspected fake players.")
+    default boolean tpaGuardEnabled() {
+        return true;
+    }
+
+    @ConfigPath({"interactions", "tpa-guard", "deny-message"})
+    @Comment("Message sent when a TPA-like command targets a suspected fake player. Supports %target%.")
+    default String tpaGuardDenyMessage() {
+        return "That player is not accepting teleport requests.";
+    }
+
+    @ConfigPath({"interactions", "tpa-guard", "command-patterns"})
+    @Comment("Regex patterns for TPA-like commands. Each pattern must expose a named group called target, or use the first capture group.")
+    default List<String> tpaGuardCommandPatterns() {
+        return List.of(
+                "^/(?:tpa|tpask|call|etpa|essentials:tpa)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)",
+                "^/(?:tpahere|tphere|etpahere|essentials:tpahere)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)"
+        );
     }
 
     void reloadConfig();

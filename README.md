@@ -27,6 +27,7 @@ None currently tracked for Folia 26.1.2.
 ## Runtime data
 
 FakePlayer stores learned runtime data in `plugins/FakePlayer/data/state.yml` using a versioned model format.
+Real-player join trust and exemptions are stored in `plugins/FakePlayer/data/exempted-players.yml`.
 Older data files such as `frequencies.yml`, `map.yml`, `deathMap.yml`, and `potentialFakePlayers.yml` are still loaded and mirrored on save for compatibility.
 
 ## Behavior model
@@ -107,6 +108,24 @@ learning:
   # 100 keeps everything.
   outlier-drop-percent: 97
 
+# Real-player identity tracking
+identity:
+  # Exempt a real player from being used as a fake player after this many real joins.
+  exempt-after-joins: 3
+
+# Interaction protections
+interactions:
+  tpa-guard:
+    # Blocks TPA-like commands when the target is a suspected fake player.
+    enabled: true
+    # Message sent to the player whose command was blocked. Supports %target%.
+    deny-message: "That player is not accepting teleport requests."
+    # Regex patterns for TPA-like commands.
+    # Each pattern must expose a named group called target, or use the first capture group.
+    command-patterns:
+      - "^/(?:tpa|tpask|call|etpa|essentials:tpa)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)"
+      - "^/(?:tpahere|tphere|etpahere|essentials:tpahere)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)"
+
 # DiscordSRV forwarding
 discordsrv:
   forward:
@@ -123,6 +142,7 @@ discordsrv:
 
 > - fakeplayer.reload
 > - fakeplayer.exempt
+> - fakeplayer.interaction.bypass
 
 ### Hard Dependencies
 > None for the default shaded build.
