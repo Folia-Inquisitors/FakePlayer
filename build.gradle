@@ -6,6 +6,19 @@ plugins {
 group = 'me.chrommob'
 version = '1.0-SNAPSHOT'
 
+def resolveBoolFlag = { String key, String envKey, boolean defaultValue ->
+    def raw = System.getProperty(key)
+    if (raw == null && project.hasProperty(key)) {
+        raw = project.property(key).toString()
+    }
+    if (raw == null && envKey != null) {
+        raw = System.getenv(envKey)
+    }
+    return raw == null ? defaultValue : raw.toString().toBoolean()
+}
+
+def shadePacketEvents = resolveBoolFlag('shadePE', 'SHADE_PE', true)
+
 repositories {
     mavenCentral()
     maven {
@@ -41,14 +54,18 @@ repositories {
 dependencies {
     compileOnly "dev.folia:folia-api:26.1.2.build.8-stable"
     compileOnly 'me.clip:placeholderapi:2.12.2'
-    compileOnly 'com.github.retrooper:packetevents-spigot:2.12.1'
+    if (shadePacketEvents) {
+        implementation 'com.github.retrooper:packetevents-spigot:2.12.1'
+    } else {
+        compileOnly 'com.github.retrooper:packetevents-spigot:2.12.1'
+    }
     implementation('me.hsgamer:hscore-config-proxy:4.9.0')
     implementation('me.hsgamer:hscore-bukkit-config:4.9.0')
     compileOnly 'com.zaxxer:HikariCP:7.0.2'
     compileOnly 'com.discordsrv:discordsrv:1.30.5'
 }
 
-def targetJavaVersion = 21
+def targetJavaVersion = 25
 java {
     def javaVersion = JavaVersion.toVersion(targetJavaVersion)
     sourceCompatibility = javaVersion
@@ -67,7 +84,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 processResources {
-    def props = [version: version]
+    def props = [
+            version           : version,
+            packetEventsDepend: shadePacketEvents ? '' : 'depend: [packetevents]'
+    ]
     inputs.properties props
     filteringCharset 'UTF-8'
     filesMatching('plugin.yml') {
@@ -76,13 +96,28 @@ processResources {
 }
 
 shadowJar {
-    relocate("me.hsgamer.hscore", "me.chrommob.libs.hscore")
-}
+    archiveClassifier.set('')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-jar {
+    if (shadePacketEvents) {
+        relocate("com.github.retrooper.packetevents", "me.chrommob.libs.packetevents.com.github.retrooper.packetevents")
+        relocate("io.github.retrooper.packetevents", "me.chrommob.libs.packetevents.io.github.retrooper.packetevents")
+    }
+    relocate("me.hsgamer.hscore", "me.chrommob.libs.hscore")
+
+    mergeServiceFiles()
+
     manifest {
         attributes(
             'paperweight-mappings-namespace': 'mojang'
         )
     }
+}
+
+tasks.named('assemble') {
+    dependsOn tasks.named('shadowJar')
+}
+
+jar {
+    enabled = false
 }

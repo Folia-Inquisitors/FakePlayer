@@ -6,18 +6,12 @@ import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoRemove;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoUpdate;
-import github.scarsz.discordsrv.DiscordSRV;
-import github.scarsz.discordsrv.dependencies.jda.api.entities.Message;
-import github.scarsz.discordsrv.dependencies.jda.api.entities.TextChannel;
-import github.scarsz.discordsrv.objects.MessageFormat;
-import github.scarsz.discordsrv.util.*;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import me.chrommob.fakeplayer.FakePlayer;
-import me.chrommob.fakeplayer.data.FakeData;
+import me.chrommob.fakeplayer.data.model.FakePlayerProfile;
+import me.chrommob.fakeplayer.util.SystemChatComponentSanitizer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -27,20 +21,19 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
-import java.util.function.BiFunction;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class FakePlayerImpl implements Listener {
     private final FakePlayer plugin = FakePlayer.getPlugin(FakePlayer.class);
-    private FakeData fakeData;
+    private FakePlayerProfile fakeData;
     private final UUID uuid = UUID.randomUUID();
     private boolean isOnline;
     private final WrapperPlayServerPlayerInfoUpdate playerInfoPacket;
     private ScheduledTask scheduledTask;
     private BukkitTask bukkitTask;
 
-    public FakePlayerImpl(FakeData fakePlayer) {
+    public FakePlayerImpl(FakePlayerProfile fakePlayer) {
         this.fakeData = fakePlayer;
         playerInfoPacket = createPlayerInfoPacket();
         onJoin();
@@ -59,7 +52,7 @@ public class FakePlayerImpl implements Listener {
     public WrapperPlayServerPlayerInfoUpdate createPlayerInfoPacket() {
         UserProfile userProfile = getUserProfile();
         WrapperPlayServerPlayerInfoUpdate.PlayerInfo playerInfo = new WrapperPlayServerPlayerInfoUpdate.PlayerInfo(
-                userProfile, true, 0, GameMode.SURVIVAL, Component.text(fakeData.getName()), null);
+                userProfile, true, 0, GameMode.SURVIVAL, Component.text(fakeData.name()), null);
         EnumSet<WrapperPlayServerPlayerInfoUpdate.Action> actions = EnumSet.of(
                 WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER,
                 WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LISTED,
@@ -72,12 +65,12 @@ public class FakePlayerImpl implements Listener {
             int latency;
             boolean isHighLatency = Math.random() < 0.05;
             if (isHighLatency) {
-                latency = new Random().nextInt(1000);
+                latency = ThreadLocalRandom.current().nextInt(1000);
             } else {
-                latency = new Random().nextInt(150) + 50;
+                latency = ThreadLocalRandom.current().nextInt(50, 200);
             }
             plugin.getDebugger()
-                    .debug("Setting latency of " + fakeData.getName() + " with UUID " + uuid + " to " + latency);
+                    .debug("Setting latency of " + fakeData.name() + " with UUID " + uuid + " to " + latency);
             playerInfoPacket.getEntries().get(0).setLatency(latency);
             for (Player player : Bukkit.getOnlinePlayers()) {
                 PacketEvents.getAPI().getPlayerManager().sendPacket(player, clone(playerInfoPacket));
@@ -88,73 +81,23 @@ public class FakePlayerImpl implements Listener {
     @NotNull
     private UserProfile getUserProfile() {
         TextureProperty textureProperty = null;
-        if (fakeData.getTexture() != null && fakeData.getSignature() != null) {
-            textureProperty = new TextureProperty("textures", fakeData.getTexture(), fakeData.getSignature());
+        if (fakeData.texture() != null && fakeData.signature() != null) {
+            textureProperty = new TextureProperty("textures", fakeData.texture(), fakeData.signature());
         }
         UserProfile userProfile;
         if (textureProperty == null) {
-            userProfile = new UserProfile(uuid, fakeData.getName());
+            userProfile = new UserProfile(uuid, fakeData.name());
         } else {
-            userProfile = new UserProfile(uuid, fakeData.getName(), List.of(textureProperty));
+            userProfile = new UserProfile(uuid, fakeData.name(), List.of(textureProperty));
         }
         return userProfile;
     }
 
     private void onJoin() {
         isOnline = true;
-        Bukkit.getServer().broadcast(fakeData.getJoinMessage());
-        if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
-            DiscordSRV discordSRV = DiscordSRV.getPlugin(DiscordSRV.class);
-            MessageFormat messageFormat = discordSRV.getMessageFromConfiguration("MinecraftPlayerJoinMessage");
-            if (messageFormat == null || !messageFormat.isAnyContent()) {
-                DiscordSRV.debug("Not sending join message due to it being disabled");
-                return;
-            }
-
-            TextChannel textChannel = discordSRV.getOptionalTextChannel("join");
-            if (textChannel == null) {
-                DiscordSRV.debug("Not sending join message, text channel is null");
-                return;
-            }
-
-            final String joinMessage = PlainTextComponentSerializer.plainText().serialize(fakeData.getJoinMessage());
-            final String displayName = StringUtils.isNotBlank(fakeData.getName()) ? MessageUtil.strip(fakeData.getName()) : "";
-            final String message = StringUtils.isNotBlank(joinMessage) ? joinMessage : "";
-            final String name = fakeData.getName();
-            final String avatarUrl = "https://cravatar.eu/helmavatar/" + name + "/128.png";
-
-            final String botAvatarUrl = DiscordUtil.getJda().getSelfUser().getEffectiveAvatarUrl();
-            String botName = discordSRV.getMainGuild() != null ? discordSRV.getMainGuild().getSelfMember().getEffectiveName() : DiscordUtil.getJda().getSelfUser().getName();
-
-            BiFunction<String, Boolean, String> translator = (content, needsEscape) -> {
-                if (content == null) return null;
-                content = content
-                        .replaceAll("%time%|%date%", TimeUtil.timeStamp())
-                        .replace("%message%", MessageUtil.strip(needsEscape ? DiscordUtil.escapeMarkdown(message) : message))
-                        .replace("%username%", needsEscape ? DiscordUtil.escapeMarkdown(name) : name)
-                        .replace("%displayname%", needsEscape ? DiscordUtil.escapeMarkdown(displayName) : displayName)
-                        .replace("%usernamenoescapes%", name)
-                        .replace("%displaynamenoescapes%", displayName)
-                        .replace("%embedavatarurl%", avatarUrl)
-                        .replace("%botavatarurl%", botAvatarUrl)
-                        .replace("%botname%", botName);
-                content = DiscordUtil.translateEmotes(content, textChannel.getGuild());
-                content = PlaceholderUtil.replacePlaceholdersToDiscord(content, Bukkit.getOfflinePlayer(uuid));
-                return content;
-            };
-
-            Message discordMessage = DiscordSRV.translateMessage(messageFormat, translator);
-            if (discordMessage == null) return;
-
-            String webhookName = translator.apply(messageFormat.getWebhookName(), false);
-            String webhookAvatarUrl = translator.apply(messageFormat.getWebhookAvatarUrl(), false);
-
-            if (messageFormat.isUseWebhooks()) {
-                WebhookUtil.deliverMessage(textChannel, webhookName, webhookAvatarUrl,
-                        discordMessage.getContentRaw(), discordMessage.getEmbeds().stream().findFirst().orElse(null));
-            } else {
-                DiscordUtil.queueMessage(textChannel, discordMessage, true);
-            }
+        broadcastToOnlinePlayers(fakeData.joinMessage());
+        if (shouldForwardJoinLeaveToDiscordSrv()) {
+            DiscordSrvBridge.sendJoinMessage(fakeData, uuid);
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
             PacketEvents.getAPI().getPlayerManager().sendPacket(player, clone(playerInfoPacket));
@@ -164,11 +107,7 @@ public class FakePlayerImpl implements Listener {
     public void quit() {
         if (isOnline) {
             broadcastQuitMessage();
-            if (plugin.isFolia()) {
-                scheduledTask.cancel();
-            } else {
-                bukkitTask.cancel();
-            }
+            cancelLatencyTask();
         }
         WrapperPlayServerPlayerInfoRemove removePacket = new WrapperPlayServerPlayerInfoRemove(uuid);
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -190,7 +129,7 @@ public class FakePlayerImpl implements Listener {
     }
 
     public void onPlayerJoin(PlayerJoinEvent event) {
-        if (event.getPlayer().getName().equals(fakeData.getName())) {
+        if (event.getPlayer().getName().equals(fakeData.name())) {
             if (event.joinMessage() != null) {
                 event.getPlayer().sendMessage(event.joinMessage());
             }
@@ -213,91 +152,99 @@ public class FakePlayerImpl implements Listener {
 
     private boolean rename() {
         isOnline = false;
-        FakeData newFakeData = plugin.getNextAvailableFakePlayer();
-        plugin.removeFakePlayer(fakeData.getName());
+        FakePlayerProfile newFakeData = plugin.getNextAvailableFakePlayer();
+        plugin.removeFakePlayer(fakeData.name());
         if (newFakeData == null) {
+            cancelLatencyTask();
             return false;
         }
-        plugin.addSelf(fakeData.getName(), this);
         fakeData = newFakeData;
-        playerInfoPacket.getEntries().get(0).getGameProfile().setName(fakeData.getName());
+        plugin.addSelf(fakeData.name(), this);
+        WrapperPlayServerPlayerInfoUpdate.PlayerInfo playerInfo = playerInfoPacket.getEntries().get(0);
+        playerInfo.setGameProfile(getUserProfile());
+        playerInfo.setDisplayName(Component.text(fakeData.name()));
         return true;
     }
 
     public void broadcastQuitMessage() {
-        Bukkit.getServer().broadcast(fakeData.getQuitMessage());
-        if (Bukkit.getPluginManager().getPlugin("DiscordSRV") != null) {
-                DiscordSRV discordSRV = DiscordSRV.getPlugin();
-                MessageFormat messageFormat = discordSRV.getMessageFromConfiguration("MinecraftPlayerLeaveMessage");
-                if (messageFormat == null || !messageFormat.isAnyContent()) {
-                    DiscordSRV.debug("Not sending leave message due to it being disabled");
-                    return;
-                }
-
-                TextChannel textChannel = discordSRV.getOptionalTextChannel("leave");
-                if (textChannel == null) {
-                    DiscordSRV.debug("Not sending quit message, text channel is null");
-                    return;
-                }
-
-                final String quitMessage = PlainTextComponentSerializer.plainText().serialize(fakeData.getQuitMessage());
-                final String displayName = StringUtils.isNotBlank(fakeData.getName()) ? MessageUtil.strip(fakeData.getName()) : "";
-                final String message = StringUtils.isNotBlank(quitMessage) ? quitMessage : "";
-                final String name = fakeData.getName();
-
-                String avatarUrl = "https://cravatar.eu/helmavatar/" + name + "/128.png";
-                String botAvatarUrl = DiscordUtil.getJda().getSelfUser().getEffectiveAvatarUrl();
-                String botName = discordSRV.getMainGuild() != null ? discordSRV.getMainGuild().getSelfMember().getEffectiveName() : DiscordUtil.getJda().getSelfUser().getName();
-
-                BiFunction<String, Boolean, String> translator = (content, needsEscape) -> {
-                    if (content == null) return null;
-                    content = content
-                            .replaceAll("%time%|%date%", TimeUtil.timeStamp())
-                            .replace("%message%", MessageUtil.strip(needsEscape ? DiscordUtil.escapeMarkdown(message) : message))
-                            .replace("%username%", MessageUtil.strip(needsEscape ? DiscordUtil.escapeMarkdown(name) : name))
-                            .replace("%displayname%", needsEscape ? DiscordUtil.escapeMarkdown(displayName) : displayName)
-                            .replace("%usernamenoescapes%", name)
-                            .replace("%displaynamenoescapes%", displayName)
-                            .replace("%embedavatarurl%", avatarUrl)
-                            .replace("%botavatarurl%", botAvatarUrl)
-                            .replace("%botname%", botName);
-                    content = DiscordUtil.translateEmotes(content, textChannel.getGuild());
-                    return content;
-                };
-
-                Message discordMessage = DiscordSRV.translateMessage(messageFormat, translator);
-                if (discordMessage == null) return;
-
-                String webhookName = translator.apply(messageFormat.getWebhookName(), false);
-                String webhookAvatarUrl = translator.apply(messageFormat.getWebhookAvatarUrl(), false);
-
-                if (messageFormat.isUseWebhooks()) {
-                    WebhookUtil.deliverMessage(textChannel, webhookName, webhookAvatarUrl,
-                            discordMessage.getContentRaw(), discordMessage.getEmbeds().stream().findFirst().orElse(null));
-                } else {
-                    DiscordUtil.queueMessage(textChannel, discordMessage, true);
-                }
+        broadcastToOnlinePlayers(fakeData.quitMessage());
+        if (shouldForwardJoinLeaveToDiscordSrv()) {
+            DiscordSrvBridge.sendLeaveMessage(fakeData, uuid);
         }
     }
 
     public static WrapperPlayServerPlayerInfoUpdate clone(WrapperPlayServerPlayerInfoUpdate packet) {
-        return new WrapperPlayServerPlayerInfoUpdate(packet.getActions(), packet.getEntries());
+        List<WrapperPlayServerPlayerInfoUpdate.PlayerInfo> copiedEntries = packet.getEntries().stream()
+                .map(WrapperPlayServerPlayerInfoUpdate.PlayerInfo::new)
+                .toList();
+        return new WrapperPlayServerPlayerInfoUpdate(EnumSet.copyOf(packet.getActions()), copiedEntries);
     }
 
     public void death(Component fakeDeathMessage, FakePlayerImpl other) {
-        Bukkit.getServer().broadcast(fakeDeathMessage
-                .replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build())
-                .replaceText(TextReplacementConfig.builder().match("%player2%").replacement(other.fakeData.getName()).build())
-        );
+        Component message = fakeDeathMessage
+                .replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.name()).build())
+                .replaceText(TextReplacementConfig.builder().match("%player2%").replacement(other.fakeData.name()).build());
+        broadcastToOnlinePlayers(message);
+        if (shouldForwardDeathToDiscordSrv()) {
+            DiscordSrvBridge.sendDeathMessage(fakeData, uuid, message);
+        }
     }
 
     public void achievement(Component fakeAchievementMessage) {
-        Bukkit.getServer().broadcast(fakeAchievementMessage
-                .replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.getName()).build())
-        );
+        Component message = fakeAchievementMessage
+                .replaceText(TextReplacementConfig.builder().match("%player%").replacement(fakeData.name()).build());
+        broadcastToOnlinePlayers(message);
+        if (shouldForwardAchievementToDiscordSrv()) {
+            DiscordSrvBridge.sendAchievementMessage(fakeData, uuid, message);
+        }
     }
 
     public UUID getUuid() {
         return uuid;
+    }
+
+    public String getProfileName() {
+        return fakeData.name();
+    }
+
+    private boolean isDiscordSrvEnabled() {
+        return Bukkit.getPluginManager().isPluginEnabled("DiscordSRV");
+    }
+
+    private void broadcastToOnlinePlayers(Component message) {
+        Component safeMessage = SystemChatComponentSanitizer.sanitize(message);
+        if (safeMessage == null) {
+            return;
+        }
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (plugin.isFolia()) {
+                player.getScheduler().run(plugin, task -> player.sendMessage(safeMessage), () -> {
+                });
+            } else {
+                player.sendMessage(safeMessage);
+            }
+        }
+    }
+
+    private void cancelLatencyTask() {
+        if (plugin.isFolia()) {
+            if (scheduledTask != null) {
+                scheduledTask.cancel();
+            }
+        } else if (bukkitTask != null) {
+            bukkitTask.cancel();
+        }
+    }
+
+    private boolean shouldForwardJoinLeaveToDiscordSrv() {
+        return isDiscordSrvEnabled() && plugin.discordSrvFakeJoinLeaveMessages();
+    }
+
+    private boolean shouldForwardDeathToDiscordSrv() {
+        return isDiscordSrvEnabled() && plugin.discordSrvFakeDeathMessages();
+    }
+
+    private boolean shouldForwardAchievementToDiscordSrv() {
+        return isDiscordSrvEnabled() && plugin.discordSrvFakeAchievementMessages();
     }
 }

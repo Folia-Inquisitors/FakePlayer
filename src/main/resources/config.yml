@@ -1,0 +1,67 @@
+# Server identity
+server:
+  # Unique server UUID. Required only when MySQL is enabled.
+  id: ""
+
+# MySQL/shared player count settings
+mysql:
+  enabled: false
+  host: ""
+  port: 3306
+  database: ""
+  username: ""
+  password: ""
+
+# Fake player population
+fake-players:
+  min: 6
+  max: 10
+
+# Fake activity timing.
+# Frequency is measured in ticks.
+# 20 ticks = 1 second.
+# 1200 ticks = 1 minute.
+# -1 = dynamic, learned from real server activity.
+activity:
+  join-leave:
+    frequency: -1
+
+  deaths:
+    enabled: true
+    frequency: -1
+
+  achievements:
+    enabled: true
+    frequency: -1
+
+# Learning settings for dynamic timing.
+learning:
+  # Drops timing samples that are unusually far from normal.
+  # 0 drops nearly everything.
+  # 100 keeps everything.
+  outlier-drop-percent: 97
+
+# Real-player identity tracking
+identity:
+  # Exempt a real player from being used as a fake player after this many real joins.
+  exempt-after-joins: 3
+
+# Interaction protections
+interactions:
+  tpa-guard:
+    # Blocks TPA-like commands when the target is a suspected fake player.
+    enabled: true
+    # Message sent to the player whose command was blocked. Supports %target%.
+    deny-message: "That player is not accepting teleport requests."
+    # Regex patterns for TPA-like commands.
+    # Each pattern must expose a named group called target, or use the first capture group.
+    command-patterns:
+      - "^/(?:tpa|tpask|call|etpa|essentials:tpa)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)"
+      - "^/(?:tpahere|tphere|etpahere|essentials:tpahere)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)"
+
+# DiscordSRV forwarding
+discordsrv:
+  forward:
+    join-leave: true
+    deaths: true
+    achievements: true

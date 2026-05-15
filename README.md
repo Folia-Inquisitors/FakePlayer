@@ -7,12 +7,36 @@ https://discord.gg/aT9z7q7hX8
 
 ## Building instructions
 
-./gradlew shadowjar
+./gradlew build
 
-*Disclaimer: There is no dependency to build this, but you will need PacketEvents in the plugins folder.* 
+Requires Java 25 for Folia 26.1.2.
+
+PacketEvents is shaded into the release jar by default, so a separate PacketEvents plugin is not required.
+
+To build against an external PacketEvents plugin instead:
+
+```
+./gradlew build -PshadePE=false
+```
+
+That external build declares `depend: [packetevents]` in `plugin.yml`.
 
 ## Known bugs
-Player acheivements and kill msgs don't work. In addition the same usernames always appear, so it isn't dynamic despite the usernames available.
+None currently tracked for Folia 26.1.2.
+
+## Runtime data
+
+FakePlayer stores learned runtime data in `plugins/FakePlayer/data/state.yml` using a versioned model format.
+Real-player join trust and exemptions are stored in `plugins/FakePlayer/data/exempted-players.yml`.
+Older data files such as `frequencies.yml`, `map.yml`, `deathMap.yml`, and `potentialFakePlayers.yml` are still loaded and mirrored on save for compatibility.
+
+## Behavior model
+
+FakePlayer learns from real server activity, turns real messages into templates, and then generates fake activity from those learned templates.
+Death and achievement templates replace the real player with `%player%`; death templates can replace a second real player with `%player2%`.
+Generated fake messages only use online fake players for those placeholders, which prevents fake deaths or achievements from naming real players.
+Achievement generation combines global weighted realism with per-fake-player progression. Each fake player remembers shown achievement templates, avoids repeats when possible, and gradually becomes more likely to receive later-game achievement categories.
+See `docs/activity-models.md` for the model notes and Mermaid graphs.
  
 ## Description
 
@@ -40,48 +64,74 @@ Player acheivements and kill msgs don't work. In addition the same usernames alw
 
 ## Default Config
 
-```
-# Server UUID
-id: 
-# MySQL settings
-mysql:
-  # Whether to use MySQL
-  enabled: true
-  # MySQL host
-  host: 
-  # MySQL port
-  port: 3365
-  # MySQL database
-  database: 
-  # MySQL username
-  username: 
-  # MySQL password
-  password: 
-# Minimum amount of fake players to appear on the server
-min-fake-players: 6
-# Maximum amount of fake players to appear on the server
-max-fake-players: 10
-# Frequency of fake players joining the server in ticks
-# 20 ticks = 1 second
-# Set to -1 to use dynamic value based on real players
-player-join-quit-frequency: -1
-# Whether to display fake death messages
-fake-death-messages: true
-# Frequency of fake messages in ticks
-# 20 ticks = 1 second
-# Set to -1 to use dynamic value based on real players
-fake-message-frequency: -1
-# Whether to display fake achievement messages
-fake-achievement-messages: true
-# Frequency of fake achievement messages in ticks
-# 20 ticks = 1 second
-# Set to -1 to use dynamic value based on real players
-fake-achievement-frequency: -1
-# When the data is very farther than the usual, it will be dropped
-# Set to 0 to drop basically everything
-# Set to 100 to drop nothing
-dynamic-frequency-outliers-drop: 97
+```yaml
+# Server identity
+server:
+  # Unique server UUID. Required only when MySQL is enabled.
+  id: ""
 
+# MySQL/shared player count settings
+mysql:
+  enabled: false
+  host: ""
+  port: 3306
+  database: ""
+  username: ""
+  password: ""
+
+# Fake player population
+fake-players:
+  min: 6
+  max: 10
+
+# Fake activity timing.
+# Frequency is measured in ticks.
+# 20 ticks = 1 second.
+# 1200 ticks = 1 minute.
+# -1 = dynamic, learned from real server activity.
+activity:
+  join-leave:
+    frequency: -1
+
+  deaths:
+    enabled: true
+    frequency: -1
+
+  achievements:
+    enabled: true
+    frequency: -1
+
+# Learning settings for dynamic timing.
+learning:
+  # Drops timing samples that are unusually far from normal.
+  # 0 drops nearly everything.
+  # 100 keeps everything.
+  outlier-drop-percent: 97
+
+# Real-player identity tracking
+identity:
+  # Exempt a real player from being used as a fake player after this many real joins.
+  exempt-after-joins: 3
+
+# Interaction protections
+interactions:
+  tpa-guard:
+    # Blocks TPA-like commands when the target is a suspected fake player.
+    enabled: true
+    # Message sent to the player whose command was blocked. Supports %target%.
+    deny-message: "That player is not accepting teleport requests."
+    # Regex patterns for TPA-like commands.
+    # Each pattern must expose a named group called target, or use the first capture group.
+    command-patterns:
+      - "^/(?:tpa|tpask|call|etpa|essentials:tpa)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)"
+      - "^/(?:tpahere|tphere|etpahere|essentials:tpahere)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)"
+
+# DiscordSRV forwarding
+discordsrv:
+  forward:
+    join-leave: true
+    deaths: true
+    achievements: true
 ```
 
 ## Placeholders
@@ -92,9 +142,12 @@ dynamic-frequency-outliers-drop: 97
 
 > - fakeplayer.reload
 > - fakeplayer.exempt
+> - fakeplayer.interaction.bypass
 
 ### Hard Dependencies
-> - [packetevents](https://github.com/retrooper/packetevents) *Purpose: The main dependency that FakePlayers needs to function*
+> None for the default shaded build.
+>
+> PacketEvents is required only when building with `-PshadePE=false`.
 
 ### Soft Dependencies
 >
