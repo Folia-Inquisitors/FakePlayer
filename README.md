@@ -89,13 +89,10 @@ identity:
 # Interaction protections
 interactions:
   tpa-guard:
-    # Blocks TPA-like commands when the target is a suspected fake player.
-    enabled: true
-    # Message sent to the player whose command was blocked. Supports %target%.
-    deny-message: "That player is not accepting teleport requests."
-    # Regex patterns for TPA-like commands.
+    # If a real player sends a teleport request to a fake player,
+    # FakePlayer treats that fake player as unavailable and makes the request fail.
     # Each pattern must expose a named group called target, or use the first capture group.
-    command-patterns:
+    command-patterns-recognized:
       - "^/(?:tpa|tpask|call|etpa|essentials:tpa)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)"
       - "^/(?:tpahere|tphere|etpahere|essentials:tpahere)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)"
 
@@ -127,7 +124,7 @@ discordsrv:
 > - [Tab Plugin](https://www.spigotmc.org/resources/tab-1-7-x-1-21-10.57806/) *Purpose: FakePlayer count on Tab*
 > - [FakePlayerAPI](https://github.com/Folia-Inquisitors/FakePlayerAPI) *Purpose: Shows Player count on velocity*
 > - [YATPA](https://github.com/Folia-Inquisitors/YATPA) *Purpose: A TPA plugin made for FakePlayers*
-> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Purpose: Denies TPA requests to fake players*
+> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Legacy standalone YATPA denial hook; FakePlayer now includes the built-in hook*
 > - [GrimYATPA](https://github.com/Folia-Inquisitors/GrimYATPA) *Purpose: Disables teleportation checks when using [Grim](https://github.com/GrimAnticheat/Grim)*
 > - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank) *Purpose: Adds a rank "regular" so it can be exempted from Fakeplayer names*
 

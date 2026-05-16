@@ -126,20 +126,12 @@ public interface FakePlayerConfig {
         return 3;
     }
 
-    @ConfigPath({"interactions", "tpa-guard", "enabled"})
-    @Comment("Whether to block TPA-like commands targeting suspected fake players.")
-    default boolean tpaGuardEnabled() {
-        return true;
-    }
-
-    @ConfigPath({"interactions", "tpa-guard", "deny-message"})
-    @Comment("Message sent when a TPA-like command targets a suspected fake player. Supports %target%.")
-    default String tpaGuardDenyMessage() {
-        return "That player is not accepting teleport requests.";
-    }
-
-    @ConfigPath({"interactions", "tpa-guard", "command-patterns"})
-    @Comment("Regex patterns for TPA-like commands. Each pattern must expose a named group called target, or use the first capture group.")
+    @ConfigPath({"interactions", "tpa-guard", "command-patterns-recognized"})
+    @Comment({
+            "If a real player sends a teleport request to a fake player,",
+            "FakePlayer treats that fake player as unavailable and makes the request fail.",
+            "Each pattern must expose a named group called target, or use the first capture group."
+    })
     default List<String> tpaGuardCommandPatterns() {
         return List.of(
                 "^/(?:tpa|tpask|call|etpa|essentials:tpa)\\s+(?<target>[A-Za-z0-9_]{3,16})(?:\\s|$)",

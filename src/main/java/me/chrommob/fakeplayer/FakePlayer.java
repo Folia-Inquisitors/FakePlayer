@@ -450,20 +450,10 @@ public final class FakePlayer extends JavaPlugin implements Listener {
                 fakePlayerConfig.discordSrvFakeAchievementMessages());
     }
 
-    public boolean tpaGuardEnabled() {
-        return configBoolean("interactions.tpa-guard.enabled",
-                "interactions.tpa-guard.enabled",
-                fakePlayerConfig.tpaGuardEnabled());
-    }
-
-    public String tpaGuardDenyMessage() {
-        return configString("interactions.tpa-guard.deny-message",
-                "interactions.tpa-guard.deny-message",
-                fakePlayerConfig.tpaGuardDenyMessage());
-    }
-
     public List<String> tpaGuardCommandPatterns() {
-        return configStringList("interactions.tpa-guard.command-patterns", fakePlayerConfig.tpaGuardCommandPatterns());
+        return configStringList("interactions.tpa-guard.command-patterns-recognized",
+                "interactions.tpa-guard.command-patterns",
+                fakePlayerConfig.tpaGuardCommandPatterns());
     }
 
     private void reloadRawConfig() {
@@ -589,6 +579,22 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private List<String> configStringList(String path, List<String> defaultValue) {
         if (rawConfig != null && rawConfig.contains(path)) {
             List<String> value = rawConfig.getStringList(path);
+            if (!value.isEmpty()) {
+                return value;
+            }
+        }
+        return defaultValue;
+    }
+
+    private List<String> configStringList(String path, String legacyPath, List<String> defaultValue) {
+        if (rawConfig != null && rawConfig.contains(path)) {
+            List<String> value = rawConfig.getStringList(path);
+            if (!value.isEmpty()) {
+                return value;
+            }
+        }
+        if (rawConfig != null && rawConfig.contains(legacyPath)) {
+            List<String> value = rawConfig.getStringList(legacyPath);
             if (!value.isEmpty()) {
                 return value;
             }
