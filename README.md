@@ -124,9 +124,9 @@ discordsrv:
 > - [Tab Plugin](https://www.spigotmc.org/resources/tab-1-7-x-1-21-10.57806/) *Purpose: FakePlayer count on Tab*
 > - [FakePlayerAPI](https://github.com/Folia-Inquisitors/FakePlayerAPI) *Purpose: Shows Player count on velocity*
 > - [YATPA](https://github.com/Folia-Inquisitors/YATPA) *Purpose: A TPA plugin made for FakePlayers*
-> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Legacy standalone YATPA denial hook; FakePlayer now includes the built-in hook*
+> - [FakePlayerYATPA](https://github.com/Folia-Inquisitors/FakePlayerYATPA) *Purpose: Legacy standalone YATPA denial hook; FakePlayer now includes the built-in hook ( redundant and not needed anymore )*
 > - [GrimYATPA](https://github.com/Folia-Inquisitors/GrimYATPA) *Purpose: Disables teleportation checks when using [Grim](https://github.com/GrimAnticheat/Grim)*
-> - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank) *Purpose: Adds a rank "regular" so it can be exempted from Fakeplayer names*
+> - [RegularRank](https://github.com/Folia-Inquisitors/RegularRank) *Purpose: Adds a rank "regular" so it can be exempted from Fakeplayer names ( redundant and not needed anymore )*
 
 ### Admin commands 
 > fakeplayer:reloadfakeplayer
