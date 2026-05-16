@@ -1,21 +1,23 @@
 package me.chrommob.fakeplayer.interaction;
 
 import me.chrommob.fakeplayer.FakePlayer;
-import net.kyori.adventure.text.Component;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 public final class FakeInteractionGuard implements Listener {
     private final FakePlayer plugin;
     private final FakeTargetResolver targetResolver;
+    private final BooleanSupplier teleportPluginHookActive;
     private List<CommandPatternRule> tpaRules = List.of();
 
-    public FakeInteractionGuard(FakePlayer plugin) {
+    public FakeInteractionGuard(FakePlayer plugin, BooleanSupplier teleportPluginHookActive) {
         this.plugin = plugin;
         this.targetResolver = new FakeTargetResolver(plugin);
+        this.teleportPluginHookActive = teleportPluginHookActive;
         reload();
     }
 
@@ -28,7 +30,9 @@ public final class FakeInteractionGuard implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
-        if (!plugin.tpaGuardEnabled() || event.getPlayer().hasPermission("fakeplayer.interaction.bypass")) {
+        if (tpaRules.isEmpty()
+                || teleportPluginHookActive.getAsBoolean()
+                || event.getPlayer().hasPermission("fakeplayer.interaction.bypass")) {
             return;
         }
         String command = event.getMessage();
@@ -38,9 +42,9 @@ public final class FakeInteractionGuard implements Listener {
                 continue;
             }
             event.setCancelled(true);
-            event.getPlayer().sendMessage(Component.text(plugin.tpaGuardDenyMessage().replace("%target%", target)));
-            plugin.getDebugger().debug("Blocked TPA-like command from " + event.getPlayer().getName()
-                    + " to suspected fake player " + target + " using pattern " + rule.rawPattern());
+            plugin.getDebugger().debug("Rejected TPA-like command from " + event.getPlayer().getName()
+                    + " to suspected fake player " + target + " using pattern " + rule.rawPattern()
+                    + "; no FakePlayer-owned denial message was sent");
             return;
         }
     }
