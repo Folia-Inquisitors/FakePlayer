@@ -10,33 +10,6 @@ https://discord.gg/aT9z7q7hX8
 ./gradlew build
 
 Requires Java 25 for Folia 26.1.2.
-
-PacketEvents is shaded into the release jar by default, so a separate PacketEvents plugin is not required.
-
-To build against an external PacketEvents plugin instead:
-
-```
-./gradlew build -PshadePE=false
-```
-
-That external build declares `depend: [packetevents]` in `plugin.yml`.
-
-## Known bugs
-None currently tracked for Folia 26.1.2.
-
-## Runtime data
-
-FakePlayer stores learned runtime data in `plugins/FakePlayer/data/state.yml` using a versioned model format.
-Real-player join trust and exemptions are stored in `plugins/FakePlayer/data/exempted-players.yml`.
-Older data files such as `frequencies.yml`, `map.yml`, `deathMap.yml`, and `potentialFakePlayers.yml` are still loaded and mirrored on save for compatibility.
-
-## Behavior model
-
-FakePlayer learns from real server activity, turns real messages into templates, and then generates fake activity from those learned templates.
-Death and achievement templates replace the real player with `%player%`; death templates can replace a second real player with `%player2%`.
-Generated fake messages only use online fake players for those placeholders, which prevents fake deaths or achievements from naming real players.
-Achievement generation combines global weighted realism with per-fake-player progression. Each fake player remembers shown achievement templates, avoids repeats when possible, and gradually becomes more likely to receive later-game achievement categories.
-See `docs/activity-models.md` for the model notes and Mermaid graphs.
  
 ## Description
 
