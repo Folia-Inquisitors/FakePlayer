@@ -4,7 +4,7 @@ main: me.chrommob.fakeplayer.FakePlayer
 api-version: '26.1.2'
 folia-supported: true
 ${packetEventsDepend}
-softdepend: [PlaceholderAPI, DiscordSRV, YATPA]
+softdepend: [PlaceholderAPI, DiscordSRV]
 libraries:
   - com.zaxxer:HikariCP:7.0.2
 commands:

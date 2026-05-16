@@ -6,18 +6,15 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
 import java.util.List;
-import java.util.function.BooleanSupplier;
 
 public final class FakeInteractionGuard implements Listener {
     private final FakePlayer plugin;
     private final FakeTargetResolver targetResolver;
-    private final BooleanSupplier teleportPluginHookActive;
     private List<CommandPatternRule> tpaRules = List.of();
 
-    public FakeInteractionGuard(FakePlayer plugin, BooleanSupplier teleportPluginHookActive) {
+    public FakeInteractionGuard(FakePlayer plugin) {
         this.plugin = plugin;
         this.targetResolver = new FakeTargetResolver(plugin);
-        this.teleportPluginHookActive = teleportPluginHookActive;
         reload();
     }
 
@@ -31,7 +28,6 @@ public final class FakeInteractionGuard implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
         if (tpaRules.isEmpty()
-                || teleportPluginHookActive.getAsBoolean()
                 || event.getPlayer().hasPermission("fakeplayer.interaction.bypass")) {
             return;
         }

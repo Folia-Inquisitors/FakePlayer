@@ -18,7 +18,6 @@ import me.chrommob.fakeplayer.impl.PlayerCommandCompletion;
 import me.chrommob.fakeplayer.identity.ExemptPlayerStorage;
 import me.chrommob.fakeplayer.identity.PlayerTrustTracker;
 import me.chrommob.fakeplayer.interaction.FakeInteractionGuard;
-import me.chrommob.fakeplayer.interaction.YatpaTeleportGuard;
 import me.chrommob.fakeplayer.model.FakeActivityModel;
 import me.chrommob.fakeplayer.model.JoinQuitPopulationModel;
 import me.chrommob.fakeplayer.model.RealActivityTemplates;
@@ -56,7 +55,6 @@ public final class FakePlayer extends JavaPlugin implements Listener {
     private FakeActivityScheduler activityScheduler;
     private PlayerTrustTracker playerTrustTracker;
     private FakeInteractionGuard fakeInteractionGuard;
-    private YatpaTeleportGuard yatpaTeleportGuard;
     private YamlConfiguration rawConfig;
     private boolean folia;
     private boolean startupComplete;
@@ -205,10 +203,7 @@ public final class FakePlayer extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new PlayerCommand(), this);
         getServer().getPluginManager().registerEvents(new PlayerCommandCompletion(), this);
-        yatpaTeleportGuard = new YatpaTeleportGuard(this);
-        yatpaTeleportGuard.registerIfAvailable();
-        fakeInteractionGuard = new FakeInteractionGuard(this,
-                () -> yatpaTeleportGuard != null && yatpaTeleportGuard.isActive());
+        fakeInteractionGuard = new FakeInteractionGuard(this);
         getServer().getPluginManager().registerEvents(fakeInteractionGuard, this);
         PacketEvents.getAPI().getEventManager().registerListener(new PlayerCount());
         PacketEvents.getAPI().init();
