@@ -52,7 +52,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly "dev.folia:folia-api:26.1.2.build.8-stable"
+    compileOnly "dev.folia:folia-api:26.3.build.26-stable"
     compileOnly 'me.clip:placeholderapi:2.12.3'
     if (shadePacketEvents) {
         implementation 'com.github.retrooper:packetevents-spigot:2.14.0'
